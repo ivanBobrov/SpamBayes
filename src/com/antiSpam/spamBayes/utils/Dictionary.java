@@ -25,6 +25,10 @@ public class Dictionary {
 
     }
 
+    public int getDictionarySize() {
+        return indexMap.size();
+    }
+
     public Integer getIndex(String base) {
         if (indexMap.containsKey(base)) {
             return indexMap.get(base);
@@ -33,7 +37,13 @@ public class Dictionary {
         }
     }
 
+    public Set<String> getBaseSet() {
+        return indexMap.keySet();
+    }
+
+    @Deprecated
     public String getBase(int index) {
+        //It's a mess. TODO: double indexing
         for (Map.Entry<String, Integer> entry : indexMap.entrySet()) {
             if (entry.getValue() == index) {
                 return entry.getKey();
