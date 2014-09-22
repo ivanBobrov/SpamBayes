@@ -2,118 +2,150 @@ package com.antiSpam.spamBayes;
 
 
 import com.antiSpam.spamBayes.utils.ContentSet;
-import com.sun.xml.internal.stream.events.CharacterEvent;
+import com.antiSpam.spamBayes.utils.Dictionary;
+import com.antiSpam.spamBayes.utils.XMLFileReader;
+import weka.classifiers.Classifier;
 import weka.core.*;
 import weka.classifiers.bayes.NaiveBayes;
 
-import javax.xml.stream.XMLEventReader;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.events.XMLEvent;
 import java.io.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 
 public class SpamBayes {
     private static HashMap<String, Integer> indexMap = new HashMap<String, Integer>();
 
     public static void main(String argv[]) {
-        String outputFilename = "result.arff";
         String hamFilename = argv[0];
         String spamFilename = argv[1];
         String testFilename = argv[2];
 
         System.out.print("\rLoad ham");
-        ContentSet hamSet = loadSet(hamFilename, 0, 2000);
+        ContentSet hamSet = loadSet(hamFilename, 0, 1000);
         System.out.print("\rLoad spam");
-        ContentSet spamSet = loadSet(spamFilename, 0, 2000);
-        System.out.print("\rLoad test");
-        ContentSet testSet = loadSet(testFilename, 20000, 20100);
+        ContentSet spamSet = loadSet(spamFilename, 0, 1000);
 
         System.out.print("\rConverting train");
-        Instances trainingContent = ContentSet.generateInstances(hamSet, spamSet);
-        System.out.print("\rConverting test");
-        Instances testContent = ContentSet.generateInstances(testSet);
+        Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
 
         System.out.print("\rClassyfying");
-        classifyTestContent(trainingContent, testContent);
-        System.out.println("\rspam: " + getPercentOfValue(testContent, 1)*100 + "%");
+        classifyTestContent(trainingContent, testFilename, 0, 1000);
 
         //performTest(argv);
     }
 
     private static void performTest(String argv[]) {
-        String outputFilename = "result.arff";
         String hamFilename = argv[0];
         String spamFilename = argv[1];
         String testFilename = argv[2];
 
-        System.out.print("\rLoad test");
-        ContentSet testSet = loadSet(testFilename, 0, 1000);
-        Instances testContent = ContentSet.generateInstances(testSet);
+        for (int i = 500; i < 10001; i += 500) {
+            for (int j = 50000; j < 100000; j+= 5000) {
+                System.out.print("\rLoad ham");
+                ContentSet hamSet = loadSet(hamFilename, 0, i);
+                System.out.print("\rLoad spam");
+                ContentSet spamSet = loadSet(spamFilename, 0, i);
 
-        for (int i = 50; i < 1001; i += 50) {
-            System.out.print("\rLoad ham");
-            ContentSet hamSet = loadSet(hamFilename, 0, i);
-            System.out.print("\rLoad spam");
-            ContentSet spamSet = loadSet(spamFilename, 0, i);
+                System.out.print("\rConverting train");
+                Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
 
-
-            System.out.print("\rConverting");
-            Instances trainingContent = ContentSet.generateInstances(hamSet, spamSet);
-
-            System.out.print("\rClassifying");
-            classifyTestContent(trainingContent, testContent);
-            System.out.println("\rnum: " + i + ", right: " + getPercentOfValue(testContent, 1)*100 + "%");
+                System.out.print("\rClassyfying");
+                classifyTestContent(trainingContent, testFilename, 0, 50000);
+            }
         }
     }
 
     private static ContentSet loadSet(String filename, int fromMessage, int toMessage) {
         ContentSet resultSet = new ContentSet();
         try {
-            FileInputStream inputStream = new FileInputStream(filename);
-            try {
-                XMLEventReader xmlEventReader = XMLInputFactory.newInstance().createXMLEventReader(inputStream);
+            XMLFileReader reader = new XMLFileReader(filename);
 
-                int currentLine = 0;
-                while (xmlEventReader.hasNext()) {
-                    XMLEvent event = xmlEventReader.nextEvent();
-
-                    if (event.isStartElement() && event.asStartElement().getName().toString().equals("text")) {
-                        XMLEvent textEvent = xmlEventReader.nextEvent();
-
-                        if (currentLine++ < fromMessage) {
-                            continue;
-                        }
-
-                        String text = ((CharacterEvent) textEvent).getData().replace("\n", " ").toLowerCase();
-                        resultSet.addString(text);
-                        //System.out.print("\r" + currentLine++);
-
-                        if (toMessage != 0 && currentLine > toMessage) {
-                            break;
-                        }
-                    }
+            int currentMessage = 0;
+            while (reader.hasNext()) {
+                if (currentMessage >= fromMessage) {
+                    resultSet.addString(reader.next());
                 }
-                //System.out.print("\n");
 
-            } catch (XMLStreamException exception) {
-                System.out.println("Error parsing " + filename);
-                exception.printStackTrace();
-            } finally {
-                try {
-                    inputStream.close();
-                } catch (IOException exception) {
-                    System.out.println("Can't close stream. Exit.");
-                    System.exit(1);
+                if (currentMessage >= toMessage) {
+                    break;
                 }
+
+                currentMessage++;
             }
-        } catch (FileNotFoundException exception) {
-            System.out.println("File " + filename + " not found. Exit.");
+        } catch (IOException exception) {
+            System.out.println("Can't read file " + filename + ". Exit.");
             System.exit(1);
         }
 
         return resultSet;
+    }
+
+    private static void classifyTestContent(Instances trainingSet,
+                                            String testFilename,
+                                            int fromMessage,
+                                            int toMessage) {
+        trainingSet.setClassIndex(trainingSet.numAttributes() - 1);
+        Instances instances = Dictionary.getNewEmptyInstances();
+
+        try {
+            Classifier classifier = getClassfier(trainingSet);
+            XMLFileReader reader = new XMLFileReader(testFilename);
+
+            int currentMessage = 0;
+            int messagesCount = 0;
+            double spam = 0, ham = 0;
+
+            while (reader.hasNext()) {
+                if (currentMessage >= fromMessage) {
+                    String text = reader.next();
+
+                    Instance classifyingInstance = Dictionary.generateInstance(text);
+                    instances.add(classifyingInstance);
+                    double label = classifier.classifyInstance(instances.instance(instances.numInstances() - 1));
+
+                    messagesCount++;
+                    //Actually it's zero or one. But can't compare double for zero.
+                    if (label > 0.5) {
+                        spam++;
+                    } else {
+                        ham++;
+                    }
+
+                    System.out.print("\rspam: " +
+                                        spam*100/messagesCount +
+                                        "% | ham: " +
+                                        ham*100/messagesCount +
+                                        "% | done: " + (double)messagesCount*100/(double)(toMessage - fromMessage) +
+                                        "%");
+                    //System.out.println(label + " ||| " + text);
+
+                    if (currentMessage > toMessage) {
+                        break;
+                    }
+
+                    currentMessage++;
+                }
+            }
+
+        } catch (IOException exception) {
+            System.out.println("Can't read test file " + testFilename + ". Exit");
+            System.exit(1);
+        } catch (Exception exception) {
+            System.out.println("Classification error");
+            exception.printStackTrace();
+        }
+    }
+
+    private static Classifier getClassfier(Instances trainingSet) throws Exception {
+        NaiveBayes bayes = new NaiveBayes();
+
+        System.out.print("\rBuilding");
+        long timeStamp = System.currentTimeMillis();
+        bayes.buildClassifier(trainingSet);
+        long buildingTime = System.currentTimeMillis() - timeStamp;
+
+        System.out.print("\rBuild in " + buildingTime + " milliseconds");
+
+        return bayes;
     }
 
     private static double getPercentOfValue(Instances instances, double value) {
@@ -146,27 +178,6 @@ public class SpamBayes {
         } catch (IOException exception) {
             System.out.println("Opening output stream error");
             exception.printStackTrace();
-        }
-    }
-
-    private static void classifyTestContent(Instances trainingSet, Instances testSet) {
-        trainingSet.setClassIndex(trainingSet.numAttributes() - 1);
-        testSet.setClassIndex(testSet.numAttributes() - 1);
-
-        NaiveBayes bayes = new NaiveBayes();
-
-        try {
-            System.out.print("\rBuilding");
-            bayes.buildClassifier(trainingSet);
-            System.out.print("\rLabeling");
-            for (int i = 0; i < testSet.numInstances(); i++) {
-                System.out.print("\rLabeling process: " + i*100/testSet.numInstances() + " %");
-                double clsLabel = bayes.classifyInstance(testSet.instance(i));
-                testSet.instance(i).setClassValue(clsLabel);
-            }
-        } catch (Exception e) {
-            System.out.println("Classification error");
-            e.printStackTrace();
         }
     }
 
