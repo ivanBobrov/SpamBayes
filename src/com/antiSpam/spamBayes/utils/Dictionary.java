@@ -31,16 +31,16 @@ public class Dictionary {
     public Integer getIndex(String base) {
         if (indexMap.containsKey(base)) {
             return indexMap.get(base);
-        } else {
-            return addBase(base);
         }
+
+        throw new IllegalArgumentException("No such nGram in dictionary");
     }
 
     public Set<String> getBaseSet() {
         return indexMap.keySet();
     }
 
-    private Integer addBase(String base) {
+    public Integer addBase(String base) {
         /*
         if (indexMap.containsKey(base)) {
             throw something
@@ -102,9 +102,9 @@ public class Dictionary {
         return result;
     }
 
-    public static Instances generateInstances(ContentSet set) {
+    public static Instances generateInstances(ContentSet set, double classValue) {
         Instances instances = getNewEmptyInstances();
-        fillInstances(instances, set, 0);
+        fillInstances(instances, set, classValue);
 
         instances.setClassIndex(instances.numAttributes() - 1);
 
@@ -115,12 +115,6 @@ public class Dictionary {
     public static Instance generateInstance(String text) {
         Dictionary dictionary = Dictionary.getInstance();
         int nGramCount = dictionary.getDictionarySize();
-
-        FastVector attributes = new FastVector(nGramCount);
-
-        for (String base : dictionary.getBaseSet()) {
-            attributes.addElement(new Attribute(base));
-        }
 
         ArrayList<String> bases = dictionary.parseString(text);
 
@@ -150,6 +144,9 @@ public class Dictionary {
             i++;
         }
 
+        indices[indices.length - 1] = nGramCount; //AttributeVectorLength - 1
+        attValues[attValues.length - 1] = 0d;
+
         return new SparseInstance(1.0, attValues, indices, nGramCount + 1);
     }
 
@@ -159,8 +156,8 @@ public class Dictionary {
         while (iterator.hasNext()) {
             SortedMap<Integer, Integer> string = iterator.next();
 
-            int[] indices = new int[string.size()];
-            double[] attValues = new double[string.size()];
+            int[] indices = new int[string.size() + 1];
+            double[] attValues = new double[string.size() + 1];
 
             int i = 0;
             for (Map.Entry<Integer, Integer> entry : string.entrySet()) {

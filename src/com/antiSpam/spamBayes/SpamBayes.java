@@ -4,9 +4,12 @@ package com.antiSpam.spamBayes;
 import com.antiSpam.spamBayes.utils.ContentSet;
 import com.antiSpam.spamBayes.utils.Dictionary;
 import com.antiSpam.spamBayes.utils.XMLFileReader;
+import weka.attributeSelection.CfsSubsetEval;
+import weka.attributeSelection.GreedyStepwise;
 import weka.classifiers.Classifier;
+import weka.classifiers.bayes.*;
+import weka.classifiers.meta.AttributeSelectedClassifier;
 import weka.core.*;
-import weka.classifiers.bayes.NaiveBayes;
 
 import java.io.*;
 import java.util.HashMap;
@@ -15,22 +18,23 @@ public class SpamBayes {
     private static HashMap<String, Integer> indexMap = new HashMap<String, Integer>();
 
     public static void main(String argv[]) {
-        String hamFilename = argv[0];
+        /*String hamFilename = argv[0];
         String spamFilename = argv[1];
         String testFilename = argv[2];
 
         System.out.print("\rLoad ham");
-        ContentSet hamSet = loadSet(hamFilename, 0, 1000);
+        ContentSet hamSet = loadSet(hamFilename, 0, 51200);
         System.out.print("\rLoad spam");
-        ContentSet spamSet = loadSet(spamFilename, 0, 1000);
+        ContentSet spamSet = loadSet(spamFilename, 0, 51200);
 
         System.out.print("\rConverting train");
         Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
+        //Instances trainingContent = Dictionary.generateInstances(spamSet, 1);
 
         System.out.print("\rClassyfying");
-        classifyTestContent(trainingContent, testFilename, 0, 1000);
+        classifyTestContent(trainingContent, testFilename, 190000, 200000);*/
 
-        //performTest(argv);
+        performTest(argv);
     }
 
     private static void performTest(String argv[]) {
@@ -38,19 +42,18 @@ public class SpamBayes {
         String spamFilename = argv[1];
         String testFilename = argv[2];
 
-        for (int i = 500; i < 10001; i += 500) {
-            for (int j = 50000; j < 100000; j+= 5000) {
-                System.out.print("\rLoad ham");
-                ContentSet hamSet = loadSet(hamFilename, 0, i);
-                System.out.print("\rLoad spam");
-                ContentSet spamSet = loadSet(spamFilename, 0, i);
+        for (int i = 100000; i < 190001; i += 10000) {
+            System.out.print("\rLoad ham");
+            ContentSet hamSet = loadSet(hamFilename, 0, 3200);
+            System.out.print("\rLoad spam");
+            ContentSet spamSet = loadSet(spamFilename, 0, 3200);
 
-                System.out.print("\rConverting train");
-                Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
+            System.out.print("\rConverting train");
+            Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
+            //Instances trainingContent = Dictionary.generateInstances(spamSet, 1);
 
-                System.out.print("\rClassyfying");
-                classifyTestContent(trainingContent, testFilename, 0, 50000);
-            }
+            System.out.print("\rClassyfying");
+            classifyTestContent(trainingContent, testFilename, i, i + 10000);
         }
     }
 
@@ -87,7 +90,7 @@ public class SpamBayes {
         Instances instances = Dictionary.getNewEmptyInstances();
 
         try {
-            Classifier classifier = getClassfier(trainingSet);
+            Classifier classifier = getClassifier(trainingSet);
             XMLFileReader reader = new XMLFileReader(testFilename);
 
             int currentMessage = 0;
@@ -95,9 +98,12 @@ public class SpamBayes {
             double spam = 0, ham = 0;
 
             while (reader.hasNext()) {
-                if (currentMessage >= fromMessage) {
-                    String text = reader.next();
+                String text = reader.next();
+                if (currentMessage >= toMessage) {
+                    break;
+                }
 
+                if (currentMessage >= fromMessage) {
                     Instance classifyingInstance = Dictionary.generateInstance(text);
                     instances.add(classifyingInstance);
                     double label = classifier.classifyInstance(instances.instance(instances.numInstances() - 1));
@@ -117,14 +123,10 @@ public class SpamBayes {
                                         "% | done: " + (double)messagesCount*100/(double)(toMessage - fromMessage) +
                                         "%");
                     //System.out.println(label + " ||| " + text);
-
-                    if (currentMessage > toMessage) {
-                        break;
-                    }
-
-                    currentMessage++;
                 }
+                currentMessage++;
             }
+            System.out.print("\n");
 
         } catch (IOException exception) {
             System.out.println("Can't read test file " + testFilename + ". Exit");
@@ -135,15 +137,25 @@ public class SpamBayes {
         }
     }
 
-    private static Classifier getClassfier(Instances trainingSet) throws Exception {
-        NaiveBayes bayes = new NaiveBayes();
+    private static Classifier getClassifier(Instances trainingSet) throws Exception {
+        //Classifier bayes = new DMNBtext(); //All appears to be spam.
+        //Classifier bayes = new HNB();//Not numeric attributes
+        //Classifier bayes = new NaiveBayesSimple();//Error: attribute с ж: standard deviation is 0 for class spam
+        //Classifier bayes = new NaiveBayes();//Builds very slow. 1000 for 15 seconds
+        Classifier bayes = new NaiveBayesMultinomialUpdateable();// 50000 - 5%
+        //Classifier bayes = new NaiveBayesUpdateable();
+
+        //Classifier bayes = new BayesNet(); //25% Не хвататет памяти. Линеный рост.
+        //Classifier bayes = new BayesianLogisticRegression(); //60%
+        //Classifier bayes = new ComplementNaiveBayes(); //50000 - 55%; 100000 - 65%
+        //Classifier bayes = new NaiveBayesMultinomial();//50000 - 65%
 
         System.out.print("\rBuilding");
         long timeStamp = System.currentTimeMillis();
         bayes.buildClassifier(trainingSet);
         long buildingTime = System.currentTimeMillis() - timeStamp;
 
-        System.out.print("\rBuild in " + buildingTime + " milliseconds");
+        System.out.print("\rBuild in " + buildingTime + " milliseconds\n");
 
         return bayes;
     }

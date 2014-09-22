@@ -19,7 +19,12 @@ public class ContentSet {
         SortedMap<Integer, Integer> stringMap = new TreeMap<Integer, Integer>();
 
         for (String base : bases) {
-            Integer index = dictionary.getIndex(base);
+            Integer index;
+            if (dictionary.containsBase(base)) {
+                 index = dictionary.getIndex(base);
+            } else {
+                index = dictionary.addBase(base);
+            }
 
             if (stringMap.containsKey(index)) {
                 Integer count = stringMap.get(index);
