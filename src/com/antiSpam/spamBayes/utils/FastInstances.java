@@ -7,8 +7,9 @@ import weka.core.Instances;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.Serializable;
 
-public class FastInstances extends Instances {
+public class FastInstances extends Instances implements Serializable {
     public FastInstances(Reader reader) throws IOException {
         super(reader);
     }

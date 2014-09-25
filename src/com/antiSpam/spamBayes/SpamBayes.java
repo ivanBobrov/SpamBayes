@@ -4,56 +4,45 @@ package com.antiSpam.spamBayes;
 import com.antiSpam.spamBayes.utils.ContentSet;
 import com.antiSpam.spamBayes.utils.Dictionary;
 import com.antiSpam.spamBayes.utils.XMLFileReader;
-import weka.attributeSelection.CfsSubsetEval;
-import weka.attributeSelection.GreedyStepwise;
+import com.sun.corba.se.impl.ior.ObjectAdapterIdNumber;
 import weka.classifiers.Classifier;
 import weka.classifiers.bayes.*;
-import weka.classifiers.meta.AttributeSelectedClassifier;
 import weka.core.*;
 
 import java.io.*;
-import java.util.HashMap;
 
 public class SpamBayes {
-    private static HashMap<String, Integer> indexMap = new HashMap<String, Integer>();
+    private static final String CLASSIFIER_SERIALIZED_FILENAME = "classifier.cls";
 
     public static void main(String argv[]) {
-        /*String hamFilename = argv[0];
-        String spamFilename = argv[1];
-        String testFilename = argv[2];
-
-        System.out.print("\rLoad ham");
-        ContentSet hamSet = loadSet(hamFilename, 0, 51200);
-        System.out.print("\rLoad spam");
-        ContentSet spamSet = loadSet(spamFilename, 0, 51200);
-
-        System.out.print("\rConverting train");
-        Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
-        //Instances trainingContent = Dictionary.generateInstances(spamSet, 1);
-
-        System.out.print("\rClassyfying");
-        classifyTestContent(trainingContent, testFilename, 190000, 200000);*/
-
-        performTest(argv);
-    }
-
-    private static void performTest(String argv[]) {
         String hamFilename = argv[0];
         String spamFilename = argv[1];
         String testFilename = argv[2];
 
-        for (int i = 100000; i < 190001; i += 10000) {
-            System.out.print("\rLoad ham");
-            ContentSet hamSet = loadSet(hamFilename, 0, 3200);
-            System.out.print("\rLoad spam");
-            ContentSet spamSet = loadSet(spamFilename, 0, 3200);
+        Classifier classifier = loadClassifier();
+        if (classifier == null) {
+            try {
+                System.out.print("\rLoad ham");
+                ContentSet hamSet = loadSet(hamFilename, 0, 51200);
+                System.out.print("\rLoad spam");
+                ContentSet spamSet = loadSet(spamFilename, 0, 51200);
 
-            System.out.print("\rConverting train");
-            Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
-            //Instances trainingContent = Dictionary.generateInstances(spamSet, 1);
+                System.out.print("\rConverting train");
+                Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
+                classifier = buildClassifier(trainingContent);
 
-            System.out.print("\rClassyfying");
-            classifyTestContent(trainingContent, testFilename, i, i + 10000);
+            } catch (Exception buildingException) {
+                System.out.print("\rCan't build classifier\n");
+                System.exit(1);
+            }
+        }
+
+        System.out.print("\rClassyfying");
+        try {
+            classifyTestContent(testFilename, classifier, 100000, 200000);
+        } catch (Exception classifyingException) {
+            System.out.print("\rCan't classify\n");
+            classifyingException.printStackTrace();
         }
     }
 
@@ -82,15 +71,13 @@ public class SpamBayes {
         return resultSet;
     }
 
-    private static void classifyTestContent(Instances trainingSet,
-                                            String testFilename,
+    private static void classifyTestContent(String testFilename,
+                                            Classifier classifier,
                                             int fromMessage,
                                             int toMessage) {
-        trainingSet.setClassIndex(trainingSet.numAttributes() - 1);
         Instances instances = Dictionary.getNewEmptyInstances();
 
         try {
-            Classifier classifier = getClassifier(trainingSet);
             XMLFileReader reader = new XMLFileReader(testFilename);
 
             int currentMessage = 0;
@@ -106,10 +93,11 @@ public class SpamBayes {
                 if (currentMessage >= fromMessage) {
                     Instance classifyingInstance = Dictionary.generateInstance(text);
                     instances.add(classifyingInstance);
+                    //double label = classifier.distributionForInstance(instances.instance(instances.numInstances() - 1))[1];
                     double label = classifier.classifyInstance(instances.instance(instances.numInstances() - 1));
 
                     messagesCount++;
-                    //Actually it's zero or one. But can't compare double for zero.
+
                     if (label > 0.5) {
                         spam++;
                     } else {
@@ -137,7 +125,7 @@ public class SpamBayes {
         }
     }
 
-    private static Classifier getClassifier(Instances trainingSet) throws Exception {
+    private static Classifier buildClassifier(Instances trainingSet) throws Exception {
         //Classifier bayes = new DMNBtext(); //All appears to be spam.
         //Classifier bayes = new HNB();//Not numeric attributes
         //Classifier bayes = new NaiveBayesSimple();//Error: attribute с ж: standard deviation is 0 for class spam
@@ -151,13 +139,27 @@ public class SpamBayes {
         //Classifier bayes = new NaiveBayesMultinomial();//50000 - 65%
 
         System.out.print("\rBuilding");
-        long timeStamp = System.currentTimeMillis();
         bayes.buildClassifier(trainingSet);
-        long buildingTime = System.currentTimeMillis() - timeStamp;
 
-        System.out.print("\rBuild in " + buildingTime + " milliseconds\n");
+        System.out.print("\rSaving to file");
+        saveClassifier(bayes); //Exception IO. Catch
 
         return bayes;
+    }
+
+    private static void saveClassifier(Classifier classifier) throws Exception {
+        weka.core.SerializationHelper.write(CLASSIFIER_SERIALIZED_FILENAME, classifier);
+    }
+
+    private static Classifier loadClassifier() {
+        Classifier classifier = null;
+        try {
+            classifier = (Classifier) weka.core.SerializationHelper.read(CLASSIFIER_SERIALIZED_FILENAME);
+        } catch (Exception e) {
+            System.out.print("\rCan't load classifier\n");
+        }
+
+        return classifier;
     }
 
     private static double getPercentOfValue(Instances instances, double value) {
