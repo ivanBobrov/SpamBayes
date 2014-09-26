@@ -3,9 +3,11 @@ package com.antiSpam.spamBayes.utils;
 
 import weka.core.*;
 
+import java.io.*;
 import java.util.*;
 
 public class Dictionary {
+    private static final String DICTIONARY_SERIALIZED_FILENAME = "dictionary.serial";
     private static final int N_GRAM_LENGTH = 3;
     private static Dictionary instance = null;
 
@@ -22,6 +24,22 @@ public class Dictionary {
 
     private Dictionary() {
 
+    }
+
+    public void serializeDictionary() throws IOException {
+        ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(DICTIONARY_SERIALIZED_FILENAME));
+        outputStream.writeObject(indexMap);
+        outputStream.flush();
+        outputStream.close();
+    }
+
+    public void deserializeDictionary() throws IOException{
+        try {
+            ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(DICTIONARY_SERIALIZED_FILENAME));
+            indexMap = (HashMap<String, Integer>) inputStream.readObject();
+        } catch (ClassNotFoundException exception) {
+            throw new IOException("Deserialization error. Can't cast object");
+        }
     }
 
     public int getDictionarySize() {

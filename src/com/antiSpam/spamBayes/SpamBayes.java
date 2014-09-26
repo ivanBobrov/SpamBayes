@@ -19,8 +19,9 @@ public class SpamBayes {
         String spamFilename = argv[1];
         String testFilename = argv[2];
 
-        Classifier classifier = loadClassifier();
-        if (classifier == null) {
+        Classifier classifier = null;
+        Classifier classifier2 = loadClassifier();
+        /*//if (classifier == null) {
             try {
                 System.out.print("\rLoad ham");
                 ContentSet hamSet = loadSet(hamFilename, 0, 51200);
@@ -35,11 +36,11 @@ public class SpamBayes {
                 System.out.print("\rCan't build classifier\n");
                 System.exit(1);
             }
-        }
+        //}*/
 
         System.out.print("\rClassyfying");
         try {
-            classifyTestContent(testFilename, classifier, 100000, 200000);
+            classifyTestContent(testFilename, classifier2, 100000, 200000);
         } catch (Exception classifyingException) {
             System.out.print("\rCan't classify\n");
             classifyingException.printStackTrace();
@@ -130,13 +131,13 @@ public class SpamBayes {
         //Classifier bayes = new HNB();//Not numeric attributes
         //Classifier bayes = new NaiveBayesSimple();//Error: attribute с ж: standard deviation is 0 for class spam
         //Classifier bayes = new NaiveBayes();//Builds very slow. 1000 for 15 seconds
-        Classifier bayes = new NaiveBayesMultinomialUpdateable();// 50000 - 5%
+        //Classifier bayes = new NaiveBayesMultinomialUpdateable();// 50000 - 5%
         //Classifier bayes = new NaiveBayesUpdateable();
 
         //Classifier bayes = new BayesNet(); //25% Не хвататет памяти. Линеный рост.
         //Classifier bayes = new BayesianLogisticRegression(); //60%
         //Classifier bayes = new ComplementNaiveBayes(); //50000 - 55%; 100000 - 65%
-        //Classifier bayes = new NaiveBayesMultinomial();//50000 - 65%
+        Classifier bayes = new NaiveBayesMultinomial();//50000 - 65%
 
         System.out.print("\rBuilding");
         bayes.buildClassifier(trainingSet);
@@ -149,12 +150,14 @@ public class SpamBayes {
 
     private static void saveClassifier(Classifier classifier) throws Exception {
         weka.core.SerializationHelper.write(CLASSIFIER_SERIALIZED_FILENAME, classifier);
+        Dictionary.getInstance().serializeDictionary();
     }
 
     private static Classifier loadClassifier() {
         Classifier classifier = null;
         try {
             classifier = (Classifier) weka.core.SerializationHelper.read(CLASSIFIER_SERIALIZED_FILENAME);
+            Dictionary.getInstance().deserializeDictionary();
         } catch (Exception e) {
             System.out.print("\rCan't load classifier\n");
         }
