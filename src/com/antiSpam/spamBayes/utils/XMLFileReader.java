@@ -15,6 +15,9 @@ public class XMLFileReader implements Iterator<String>, Closeable {
     private static final String TAG_NAME = "text";
     private final FileInputStream inputStream;
     private XMLEventReader xmlEventReader;
+    private Integer fromMessage = null;
+    private Integer toMessage = null;
+    private Integer currentMessage = 0;
 
     //TODO: throw own exception instead of IO?
     public XMLFileReader(String filename) throws IOException {
@@ -26,9 +29,15 @@ public class XMLFileReader implements Iterator<String>, Closeable {
         }
     }
 
+    public XMLFileReader(String filename, int fromMessage, int toMessage) throws IOException {
+        this(filename);
+        this.fromMessage = fromMessage;
+        this.toMessage = toMessage;
+    }
+
     @Override
     public boolean hasNext() {
-        return xmlEventReader.hasNext();
+        return xmlEventReader.hasNext() && (toMessage == null || currentMessage < toMessage);
     }
 
     @Override
@@ -39,6 +48,12 @@ public class XMLFileReader implements Iterator<String>, Closeable {
 
                 if (event.isStartElement() && event.asStartElement().getName().toString().equals(TAG_NAME)) {
                     XMLEvent textEvent = xmlEventReader.nextEvent();
+
+                    currentMessage++;
+                    if (fromMessage != null && currentMessage - 1 < fromMessage) {
+                        continue;
+                    }
+
                     return ((CharacterEvent) textEvent).getData().replace("\n", " ").toLowerCase();
                 }
             } catch (XMLStreamException exception) {

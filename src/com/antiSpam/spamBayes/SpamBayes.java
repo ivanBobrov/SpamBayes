@@ -3,8 +3,8 @@ package com.antiSpam.spamBayes;
 
 import com.antiSpam.spamBayes.utils.ContentSet;
 import com.antiSpam.spamBayes.utils.Dictionary;
+import com.antiSpam.spamBayes.utils.SpamBayesException;
 import com.antiSpam.spamBayes.utils.XMLFileReader;
-import com.sun.corba.se.impl.ior.ObjectAdapterIdNumber;
 import weka.classifiers.Classifier;
 import weka.classifiers.bayes.*;
 import weka.core.*;
@@ -14,119 +14,44 @@ import java.io.*;
 public class SpamBayes {
     private static final String CLASSIFIER_SERIALIZED_FILENAME = "classifier.cls";
 
-    public static void main(String argv[]) {
-        String hamFilename = argv[0];
-        String spamFilename = argv[1];
-        String testFilename = argv[2];
+    public static void main(String args[]) {
+        String hamFilename = args[0];
+        String spamFilename = args[1];
+        String testFilename = args[2];
 
-        Classifier classifier = null;
-        Classifier classifier2 = loadClassifier();
-        /*//if (classifier == null) {
-            try {
-                System.out.print("\rLoad ham");
-                ContentSet hamSet = loadSet(hamFilename, 0, 51200);
-                System.out.print("\rLoad spam");
-                ContentSet spamSet = loadSet(spamFilename, 0, 51200);
+        Dictionary.getInstance().setNGramLength(3);
+        Dictionary.getInstance().setPreprocessEnabled(false);
 
-                System.out.print("\rConverting train");
-                Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
-                classifier = buildClassifier(trainingContent);
-
-            } catch (Exception buildingException) {
-                System.out.print("\rCan't build classifier\n");
-                System.exit(1);
-            }
-        //}*/
-
-        System.out.print("\rClassyfying");
         try {
-            classifyTestContent(testFilename, classifier2, 100000, 200000);
-        } catch (Exception classifyingException) {
-            System.out.print("\rCan't classify\n");
-            classifyingException.printStackTrace();
-        }
-    }
-
-    private static ContentSet loadSet(String filename, int fromMessage, int toMessage) {
-        ContentSet resultSet = new ContentSet();
-        try {
-            XMLFileReader reader = new XMLFileReader(filename);
-
-            int currentMessage = 0;
-            while (reader.hasNext()) {
-                if (currentMessage >= fromMessage) {
-                    resultSet.addString(reader.next());
-                }
-
-                if (currentMessage >= toMessage) {
-                    break;
-                }
-
-                currentMessage++;
+            Classifier classifier = loadClassifier();
+            if (classifier == null) {
+                classifier = buildClassifier(hamFilename, spamFilename);
+                saveClassifier(classifier);
             }
-        } catch (IOException exception) {
-            System.out.println("Can't read file " + filename + ". Exit.");
+
+            classifyTestContent(testFilename, classifier, 100000, 200000);
+
+        } catch (SpamBayesException generalException) {
+            generalException.printStackTrace();
             System.exit(1);
         }
 
-        return resultSet;
+
     }
 
-    private static void classifyTestContent(String testFilename,
-                                            Classifier classifier,
-                                            int fromMessage,
-                                            int toMessage) {
-        Instances instances = Dictionary.getNewEmptyInstances();
+    private static Classifier buildClassifier(String hamFilename, String spamFilename) throws SpamBayesException {
+        //Не логично, что в методе loadSet грузятся н-граммы в словарь!
+        System.out.print("\rLoad ham");
+        ContentSet hamSet = loadSet(hamFilename, 0, 4000); //magic numbers
+        System.out.print("\rLoad spam");
+        ContentSet spamSet = loadSet(spamFilename, 0, 4000); //magic numbers
 
-        try {
-            XMLFileReader reader = new XMLFileReader(testFilename);
-
-            int currentMessage = 0;
-            int messagesCount = 0;
-            double spam = 0, ham = 0;
-
-            while (reader.hasNext()) {
-                String text = reader.next();
-                if (currentMessage >= toMessage) {
-                    break;
-                }
-
-                if (currentMessage >= fromMessage) {
-                    Instance classifyingInstance = Dictionary.generateInstance(text);
-                    instances.add(classifyingInstance);
-                    //double label = classifier.distributionForInstance(instances.instance(instances.numInstances() - 1))[1];
-                    double label = classifier.classifyInstance(instances.instance(instances.numInstances() - 1));
-
-                    messagesCount++;
-
-                    if (label > 0.5) {
-                        spam++;
-                    } else {
-                        ham++;
-                    }
-
-                    System.out.print("\rspam: " +
-                                        spam*100/messagesCount +
-                                        "% | ham: " +
-                                        ham*100/messagesCount +
-                                        "% | done: " + (double)messagesCount*100/(double)(toMessage - fromMessage) +
-                                        "%");
-                    //System.out.println(label + " ||| " + text);
-                }
-                currentMessage++;
-            }
-            System.out.print("\n");
-
-        } catch (IOException exception) {
-            System.out.println("Can't read test file " + testFilename + ". Exit");
-            System.exit(1);
-        } catch (Exception exception) {
-            System.out.println("Classification error");
-            exception.printStackTrace();
-        }
+        System.out.print("\rConverting train");
+        Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
+        return getNewClassifier(trainingContent);
     }
 
-    private static Classifier buildClassifier(Instances trainingSet) throws Exception {
+    private static Classifier getNewClassifier(Instances trainingSet) throws SpamBayesException {
         //Classifier bayes = new DMNBtext(); //All appears to be spam.
         //Classifier bayes = new HNB();//Not numeric attributes
         //Classifier bayes = new NaiveBayesSimple();//Error: attribute с ж: standard deviation is 0 for class spam
@@ -140,17 +65,16 @@ public class SpamBayes {
         Classifier bayes = new NaiveBayesMultinomial();//50000 - 65%
 
         System.out.print("\rBuilding");
-        bayes.buildClassifier(trainingSet);
+        try {
+            bayes.buildClassifier(trainingSet);
+        } catch (Exception exception) {
+            throw new SpamBayesException("Can't build classifier");
+        }
 
         System.out.print("\rSaving to file");
-        saveClassifier(bayes); //Exception IO. Catch
+        saveClassifier(bayes);
 
         return bayes;
-    }
-
-    private static void saveClassifier(Classifier classifier) throws Exception {
-        weka.core.SerializationHelper.write(CLASSIFIER_SERIALIZED_FILENAME, classifier);
-        Dictionary.getInstance().serializeDictionary();
     }
 
     private static Classifier loadClassifier() {
@@ -158,23 +82,79 @@ public class SpamBayes {
         try {
             classifier = (Classifier) weka.core.SerializationHelper.read(CLASSIFIER_SERIALIZED_FILENAME);
             Dictionary.getInstance().deserializeDictionary();
-        } catch (Exception e) {
-            System.out.print("\rCan't load classifier\n");
+        } catch (Exception exception) {
+            System.out.println("Can't load classifier. Continue");
         }
 
         return classifier;
     }
 
-    private static double getPercentOfValue(Instances instances, double value) {
-        double res = 0;
-        for (int i = 0; i < instances.numInstances(); i++) {
-            Instance instance = instances.instance(i);
-            if (instance.value(instances.numAttributes() - 1) == value) {
-                res++;
+    private static void saveClassifier(Classifier classifier) throws SpamBayesException {
+        try {
+            weka.core.SerializationHelper.write(CLASSIFIER_SERIALIZED_FILENAME, classifier);
+            Dictionary.getInstance().serializeDictionary();
+        } catch (Exception exception) {
+            throw new SpamBayesException("Can't save classifier", exception);
+        }
+    }
+
+    private static ContentSet loadSet(String filename, int fromMessage, int toMessage) throws SpamBayesException {
+        ContentSet resultSet = new ContentSet();
+        try {
+            XMLFileReader reader = new XMLFileReader(filename, fromMessage, toMessage);
+
+            while (reader.hasNext()) {
+                resultSet.addString(reader.next());
             }
+        } catch (IOException exception) {
+            throw new SpamBayesException("Can't read file " + filename + ".", exception);
         }
 
-        return res/instances.numInstances();
+        return resultSet;
+    }
+
+    private static void classifyTestContent(String testFilename,
+                                            Classifier classifier,
+                                            int fromMessage,
+                                            int toMessage) throws SpamBayesException {
+
+        Instances instances = Dictionary.getNewEmptyInstances();
+
+        try {
+            XMLFileReader reader = new XMLFileReader(testFilename, fromMessage, toMessage);
+
+            int messagesCount = 0;
+            double spam = 0, ham = 0;
+
+            while (reader.hasNext()) {
+                String text = reader.next();
+
+                Instance classifyingInstance = Dictionary.generateInstance(text);
+                instances.add(classifyingInstance);
+                //double label = classifier.distributionForInstance(instances.instance(instances.numInstances() - 1))[1];
+                double label = classifier.classifyInstance(instances.instance(instances.numInstances() - 1));
+
+                if (label > 0.5) {
+                    spam++;
+                } else {
+                    ham++;
+                }
+                messagesCount++;
+
+                System.out.print("\rspam: " +
+                                    spam*100/messagesCount +
+                                    "% | ham: " +
+                                    ham*100/messagesCount +
+                                    "% | done: " + (double)messagesCount*100/(double)(toMessage - fromMessage) +
+                                    "%");
+            }
+            System.out.print("\n");
+
+        } catch (IOException exception) {
+            throw new SpamBayesException("Can't read test file " + testFilename + ".", exception);
+        } catch (Exception exception) {
+            throw new SpamBayesException("Classification error", exception);
+        }
     }
 
     private static void saveContentToFile(Instances instances, String filename) {

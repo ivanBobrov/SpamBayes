@@ -7,9 +7,11 @@ import java.io.*;
 import java.util.*;
 
 public class Dictionary {
+    private static final String REGEX = "\\s|\\.|,|\"|-|\\s+|\\?|!|:|–|\\)|\\(|\\*|\\[|\\]|\\|/|;|»|«|#";
     private static final String DICTIONARY_SERIALIZED_FILENAME = "dictionary.serial";
-    private static final int N_GRAM_LENGTH = 3;
     private static Dictionary instance = null;
+    private int nGramLength = 3;
+    private boolean preprocessEnabled = false;
 
     private HashMap<String, Integer> indexMap = new HashMap<String, Integer>();
 
@@ -20,7 +22,6 @@ public class Dictionary {
 
         return instance;
     }
-
 
     private Dictionary() {
 
@@ -44,6 +45,14 @@ public class Dictionary {
 
     public int getDictionarySize() {
         return indexMap.size();
+    }
+
+    public void setNGramLength(int nGramLength) {
+        this.nGramLength = nGramLength;
+    }
+
+    public void setPreprocessEnabled(boolean enabled) {
+        this.preprocessEnabled = enabled;
     }
 
     public Integer getIndex(String base) {
@@ -72,11 +81,39 @@ public class Dictionary {
     }
 
     public ArrayList<String> parseString(String string) {
+        return parseString(string, preprocessEnabled);
+    }
+
+    public ArrayList<String> parseString(String string, boolean preprocess) {
+        return preprocess ? getPreprocessedBases(string) : getBases(string);
+    }
+
+    private ArrayList<String> getBases(String string) {
         ArrayList<String> bases = new ArrayList<String>();
 
-        if (string.length() > N_GRAM_LENGTH) {
-            for (int i = 0; i < string.length() - (N_GRAM_LENGTH - 1); i++) {
-                bases.add(string.substring(i, i + N_GRAM_LENGTH));
+        if (string.length() > nGramLength) {
+            for (int i = 0; i < string.length() - (nGramLength - 1); i++) {
+                bases.add(string.substring(i, i + nGramLength));
+            }
+        }
+
+        return bases;
+    }
+
+    private ArrayList<String> getPreprocessedBases(String string) {
+        StringBuffer buffer = new StringBuffer();
+        String[] words = string.split(REGEX);
+        ArrayList<String> bases = new ArrayList<String>();
+
+        for (String word : words) {
+            if (word.matches("[a-zA-Zа-яА-Я0-9]*") && !word.isEmpty()) {
+                buffer.append(word.replaceAll("\\s+", "")).append(" ");
+            }
+        }
+
+        if (buffer.length() > nGramLength) {
+            for (int i = 0; i < buffer.length() - (nGramLength - 1); i++) {
+                bases.add(buffer.substring(i, i + nGramLength));
             }
         }
 
@@ -134,7 +171,7 @@ public class Dictionary {
         Dictionary dictionary = Dictionary.getInstance();
         int nGramCount = dictionary.getDictionarySize();
 
-        ArrayList<String> bases = dictionary.parseString(text);
+        ArrayList<String> bases = dictionary.parseString(text, false);
 
         //For uniqueness of nGram in the set
         SortedMap<Integer, Double> nGrams = new TreeMap<Integer, Double>();

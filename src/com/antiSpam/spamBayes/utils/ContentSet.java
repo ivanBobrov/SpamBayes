@@ -35,7 +35,7 @@ public class ContentSet {
             }
         }
 
-        if (stringMap.size() > 0) {
+        if (!stringMap.isEmpty()) {
             stringList.add(stringMap);
         }
     }
