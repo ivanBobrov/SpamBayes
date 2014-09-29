@@ -54,11 +54,15 @@ public class XMLFileReader implements Iterator<String>, Closeable {
                         continue;
                     }
 
+                    if (!textEvent.isCharacters()) {
+                        continue;
+                    }
+
                     return ((CharacterEvent) textEvent).getData().replace("\n", " ").toLowerCase();
                 }
             } catch (XMLStreamException exception) {
                 //TODO: throw own exception
-                throw new IllegalStateException("Can't read xml");
+                throw new IllegalStateException("Can't read xml", exception);
             }
         }
 

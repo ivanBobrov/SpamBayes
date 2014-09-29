@@ -19,7 +19,7 @@ public class SpamBayes {
         String spamFilename = args[1];
         String testFilename = args[2];
 
-        Dictionary.getInstance().setNGramLength(3);
+        Dictionary.getInstance().setNGramLength(2);
         Dictionary.getInstance().setPreprocessEnabled(false);
 
         try {
@@ -29,7 +29,17 @@ public class SpamBayes {
                 saveClassifier(classifier);
             }
 
-            classifyTestContent(testFilename, classifier, 100000, 200000);
+            System.out.print("\rLoading done");
+
+            double[] levels = {1e-150, 1e-140, 1e-100, 1e-60, 1e-40, 1e-30, 1e-20, 1e-10, 1e-5, 1e-2, 0.1, 0.5,
+                    1 - 1e-10, 1 - 1e-12, 1 - 1e-15, 1 - 1e-20};
+
+            for (double level : levels) {
+                classifyTestContent(testFilename, classifier, 100000, 200000, level);
+            }
+
+            //classifyTestContent("ham.xml", classifier, 100000, 200000, 0.5);
+            //classifyTestContent("spam.xml", classifier, 100000, 200000, 0.5);
 
         } catch (SpamBayesException generalException) {
             generalException.printStackTrace();
@@ -41,10 +51,10 @@ public class SpamBayes {
 
     private static Classifier buildClassifier(String hamFilename, String spamFilename) throws SpamBayesException {
         //Не логично, что в методе loadSet грузятся н-граммы в словарь!
-        System.out.print("\rLoad ham");
-        ContentSet hamSet = loadSet(hamFilename, 0, 4000); //magic numbers
+        System.out.print    ("\rLoad ham");
+        ContentSet hamSet = loadSet(hamFilename, 0, 25600); //magic numbers
         System.out.print("\rLoad spam");
-        ContentSet spamSet = loadSet(spamFilename, 0, 4000); //magic numbers
+        ContentSet spamSet = loadSet(spamFilename, 0, 25600); //magic numbers
 
         System.out.print("\rConverting train");
         Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
@@ -116,7 +126,8 @@ public class SpamBayes {
     private static void classifyTestContent(String testFilename,
                                             Classifier classifier,
                                             int fromMessage,
-                                            int toMessage) throws SpamBayesException {
+                                            int toMessage,
+                                            double level) throws SpamBayesException {
 
         Instances instances = Dictionary.getNewEmptyInstances();
 
@@ -124,31 +135,35 @@ public class SpamBayes {
             XMLFileReader reader = new XMLFileReader(testFilename, fromMessage, toMessage);
 
             int messagesCount = 0;
-            double spam = 0, ham = 0;
+            double spam = 0, ham = 0, spamPercent = 0, hamPercent = 0;
 
             while (reader.hasNext()) {
                 String text = reader.next();
 
                 Instance classifyingInstance = Dictionary.generateInstance(text);
                 instances.add(classifyingInstance);
-                //double label = classifier.distributionForInstance(instances.instance(instances.numInstances() - 1))[1];
-                double label = classifier.classifyInstance(instances.instance(instances.numInstances() - 1));
+                double label = classifier.distributionForInstance(instances.instance(instances.numInstances() - 1))[1];
+                //double label = classifier.classifyInstance(instances.instance(instances.numInstances() - 1));
 
-                if (label > 0.5) {
+                if (label > level) {
                     spam++;
                 } else {
                     ham++;
                 }
                 messagesCount++;
 
-                System.out.print("\rspam: " +
-                                    spam*100/messagesCount +
-                                    "% | ham: " +
-                                    ham*100/messagesCount +
-                                    "% | done: " + (double)messagesCount*100/(double)(toMessage - fromMessage) +
-                                    "%");
+
+                spamPercent = spam*100/messagesCount;
+                hamPercent = ham*100/messagesCount;
+                double percentDone = (double)messagesCount*100/(double)(toMessage - fromMessage);
+                if (percentDone % 1 == 0) {
+                    System.out.print("\rspam: " + spamPercent + "% | ham: " + hamPercent +
+                            "% | done: " + percentDone + "%");
+                }
             }
-            System.out.print("\n");
+
+            String out = String.format("\rspam: %.1f %% | ham %.1f %% | level: %e\n", spamPercent, hamPercent, level);
+            System.out.print(out);
 
         } catch (IOException exception) {
             throw new SpamBayesException("Can't read test file " + testFilename + ".", exception);
