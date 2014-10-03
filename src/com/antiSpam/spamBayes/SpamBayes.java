@@ -1,15 +1,13 @@
 package com.antiSpam.spamBayes;
 
 
-import com.antiSpam.spamBayes.utils.ContentSet;
-import com.antiSpam.spamBayes.utils.Dictionary;
-import com.antiSpam.spamBayes.utils.SpamBayesException;
-import com.antiSpam.spamBayes.utils.XMLFileReader;
+import com.antiSpam.spamBayes.utils.*;
 import weka.classifiers.Classifier;
 import weka.classifiers.bayes.*;
 import weka.core.*;
 
 import java.io.*;
+import java.util.Iterator;
 
 public class SpamBayes {
     private static final String CLASSIFIER_SERIALIZED_FILENAME = "classifier.cls";
@@ -19,29 +17,32 @@ public class SpamBayes {
         String spamFilename = args[1];
         String testFilename = args[2];
 
-        Dictionary.getInstance().setNGramLength(2);
+        Dictionary.getInstance().setNGramLength(3);
         Dictionary.getInstance().setPreprocessEnabled(false);
 
         try {
             Classifier classifier = loadClassifier();
+
+            double timeStamp = System.currentTimeMillis();
             if (classifier == null) {
                 classifier = buildClassifier(hamFilename, spamFilename);
                 saveClassifier(classifier);
             }
 
-            System.out.print("\rLoading done");
-
+            String out = String.format("\rLoading done in %f seconds", (System.currentTimeMillis() - timeStamp) / 1000);
+            System.out.print(out);
+            /*
             double[] levels = {1e-150, 1e-140, 1e-100, 1e-60, 1e-40, 1e-30, 1e-20, 1e-10, 1e-5, 1e-2, 0.1, 0.5,
                     1 - 1e-10, 1 - 1e-12, 1 - 1e-15, 1 - 1e-20};
 
             for (double level : levels) {
                 classifyTestContent(testFilename, classifier, 100000, 200000, level);
-            }
+            }*/
 
-            //classifyTestContent("ham.xml", classifier, 100000, 200000, 0.5);
-            //classifyTestContent("spam.xml", classifier, 100000, 200000, 0.5);
+            //classifyTestContent("ham.xml", classifier, 0, 100000, 0.5);
+            classifyTestContent("spam.json", classifier, 100000, 200000, 0.5);
 
-        } catch (SpamBayesException generalException) {
+        } catch (BayesSpamFilterException generalException) {
             generalException.printStackTrace();
             System.exit(1);
         }
@@ -49,19 +50,19 @@ public class SpamBayes {
 
     }
 
-    private static Classifier buildClassifier(String hamFilename, String spamFilename) throws SpamBayesException {
+    private static Classifier buildClassifier(String hamFilename, String spamFilename) throws BayesSpamFilterException {
         //Не логично, что в методе loadSet грузятся н-граммы в словарь!
         System.out.print    ("\rLoad ham");
-        ContentSet hamSet = loadSet(hamFilename, 0, 25600); //magic numbers
+        ContentSet hamSet = loadSet(hamFilename, 0, 51200); //magic numbers
         System.out.print("\rLoad spam");
-        ContentSet spamSet = loadSet(spamFilename, 0, 25600); //magic numbers
+        ContentSet spamSet = loadSet(spamFilename, 0, 51200); //magic numbers
 
         System.out.print("\rConverting train");
         Instances trainingContent = Dictionary.generateInstances(hamSet, spamSet);
         return getNewClassifier(trainingContent);
     }
 
-    private static Classifier getNewClassifier(Instances trainingSet) throws SpamBayesException {
+    private static Classifier getNewClassifier(Instances trainingSet) throws BayesSpamFilterException {
         //Classifier bayes = new DMNBtext(); //All appears to be spam.
         //Classifier bayes = new HNB();//Not numeric attributes
         //Classifier bayes = new NaiveBayesSimple();//Error: attribute с ж: standard deviation is 0 for class spam
@@ -78,13 +79,10 @@ public class SpamBayes {
         try {
             bayes.buildClassifier(trainingSet);
         } catch (Exception exception) {
-            throw new SpamBayesException("Can't build classifier");
+            throw new BayesSpamFilterException("Can't build classifier");
         }
 
-        System.out.print("\rSaving to file");
-        saveClassifier(bayes);
-
-        return bayes;
+            return bayes;
     }
 
     private static Classifier loadClassifier() {
@@ -99,25 +97,27 @@ public class SpamBayes {
         return classifier;
     }
 
-    private static void saveClassifier(Classifier classifier) throws SpamBayesException {
+    private static void saveClassifier(Classifier classifier) throws BayesSpamFilterException {
         try {
             weka.core.SerializationHelper.write(CLASSIFIER_SERIALIZED_FILENAME, classifier);
             Dictionary.getInstance().serializeDictionary();
         } catch (Exception exception) {
-            throw new SpamBayesException("Can't save classifier", exception);
+            throw new BayesSpamFilterException("Can't save classifier", exception);
         }
     }
 
-    private static ContentSet loadSet(String filename, int fromMessage, int toMessage) throws SpamBayesException {
+    private static ContentSet loadSet(String filename, int fromMessage, int toMessage) throws BayesSpamFilterException {
         ContentSet resultSet = new ContentSet();
         try {
-            XMLFileReader reader = new XMLFileReader(filename, fromMessage, toMessage);
+            Iterator<String> reader = new JSONFileReader(filename, fromMessage, toMessage);
 
-            while (reader.hasNext()) {
-                resultSet.addString(reader.next());
+            String text = reader.next();
+            while (text != null) {
+                resultSet.addString(text);
+                text = reader.next();
             }
         } catch (IOException exception) {
-            throw new SpamBayesException("Can't read file " + filename + ".", exception);
+            throw new BayesSpamFilterException("Can't read file " + filename + ".", exception);
         }
 
         return resultSet;
@@ -127,21 +127,24 @@ public class SpamBayes {
                                             Classifier classifier,
                                             int fromMessage,
                                             int toMessage,
-                                            double level) throws SpamBayesException {
+                                            double level) throws BayesSpamFilterException {
 
         Instances instances = Dictionary.getNewEmptyInstances();
 
         try {
-            XMLFileReader reader = new XMLFileReader(testFilename, fromMessage, toMessage);
+            Iterator<String> reader = new JSONFileReader(testFilename, fromMessage, toMessage);
 
             int messagesCount = 0;
             double spam = 0, ham = 0, spamPercent = 0, hamPercent = 0;
+            double timeStamp, timeSpent = 0;
 
-            while (reader.hasNext()) {
-                String text = reader.next();
+            String text = reader.next();
+            while (text != null) {
+                timeStamp = System.currentTimeMillis();
 
                 Instance classifyingInstance = Dictionary.generateInstance(text);
                 instances.add(classifyingInstance);
+
                 double label = classifier.distributionForInstance(instances.instance(instances.numInstances() - 1))[1];
                 //double label = classifier.classifyInstance(instances.instance(instances.numInstances() - 1));
 
@@ -152,6 +155,9 @@ public class SpamBayes {
                 }
                 messagesCount++;
 
+                timeStamp -= System.currentTimeMillis();
+                timeSpent += -timeStamp;
+
 
                 spamPercent = spam*100/messagesCount;
                 hamPercent = ham*100/messagesCount;
@@ -160,15 +166,25 @@ public class SpamBayes {
                     System.out.print("\rspam: " + spamPercent + "% | ham: " + hamPercent +
                             "% | done: " + percentDone + "%");
                 }
+
+                /*if (timeSpent >= 1000L) {
+                    break;
+                }*/
+                text = reader.next();
             }
 
-            String out = String.format("\rspam: %.1f %% | ham %.1f %% | level: %e\n", spamPercent, hamPercent, level);
+            String out = String.format("\rspam: %.1f %% | ham %.1f %% | level: %e | Messages in second: %f | messages: %d\n",
+                                       spamPercent,
+                                       hamPercent,
+                                       level,
+                                       messagesCount * 1000 / timeSpent,
+                                       messagesCount);
             System.out.print(out);
 
         } catch (IOException exception) {
-            throw new SpamBayesException("Can't read test file " + testFilename + ".", exception);
+            throw new BayesSpamFilterException("Can't read test file " + testFilename + ".", exception);
         } catch (Exception exception) {
-            throw new SpamBayesException("Classification error", exception);
+            throw new BayesSpamFilterException("Classification error", exception);
         }
     }
 

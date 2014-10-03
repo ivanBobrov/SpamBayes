@@ -14,7 +14,7 @@ import java.util.Iterator;
 public class XMLFileReader implements Iterator<String>, Closeable {
     private static final String TAG_NAME = "text";
     private final FileInputStream inputStream;
-    private XMLEventReader xmlEventReader;
+    private final XMLEventReader xmlEventReader;
     private Integer fromMessage = null;
     private Integer toMessage = null;
     private Integer currentMessage = 0;

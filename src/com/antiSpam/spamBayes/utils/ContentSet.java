@@ -15,7 +15,7 @@ public class ContentSet {
 
     public void addString(String string) {
         //TODO: Check for null string and string with length less than N_GRAM_LENGTH
-        ArrayList<String> bases = dictionary.parseString(string);
+        ArrayList<String> bases = dictionary.parseStringOld(string);
         SortedMap<Integer, Integer> stringMap = new TreeMap<Integer, Integer>();
 
         for (String base : bases) {

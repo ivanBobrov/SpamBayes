@@ -80,7 +80,7 @@ public class Dictionary {
         return newIndex;
     }
 
-    public ArrayList<String> parseString(String string) {
+    public ArrayList<String> parseStringOld(String string) {
         return parseString(string, preprocessEnabled);
     }
 
@@ -228,5 +228,10 @@ public class Dictionary {
             Instance newInstance = new SparseInstance(1.0, attValues, indices, numAttributes);
             instances.add(newInstance);
         }
+    }
+
+    public SortedMap<Integer, Integer> parseString(String text) {
+        //TODO: implement
+        return null;
     }
 }
