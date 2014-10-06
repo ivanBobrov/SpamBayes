@@ -9,7 +9,10 @@ import weka.classifiers.bayes.NaiveBayesMultinomial;
 import java.io.IOException;
 import java.util.Iterator;
 
-
+/*
+ TODO: check for null file names in constructor
+ TODO: creating new filter without ham or spam
+*/
 public class BayesSpamFilter implements SpamFilter {
     private String hamFilename;
     private String spamFilename;
@@ -30,11 +33,12 @@ public class BayesSpamFilter implements SpamFilter {
         instancesAdapter = new InstancesAdapter();
 
         try {
-            Iterator<String> hamFileIterator = new JSONFileReader(hamFilename);
+            Iterator<String> hamFileIterator = new JSONFileReader(hamFilename, 0, 10000);
             while (hamFileIterator.hasNext()) {
                 InstanceAdapter newInstance = new InstanceAdapter(hamFileIterator.next(), 0d);
                 instancesAdapter.add(newInstance.getRawInstance());
             }
+            instancesAdapter.addAllAttributes();
 
             if (spamFilename != null) {
                 Iterator<String> spamFileIterator = new JSONFileReader(spamFilename);

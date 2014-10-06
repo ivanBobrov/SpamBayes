@@ -27,6 +27,91 @@ public class Dictionary {
 
     }
 
+    public int getDictionarySize() {
+        return indexMap.size();
+    }
+
+    public void setNGramLength(int nGramLength) {
+        this.nGramLength = nGramLength;
+    }
+
+    public void setPreprocessEnabled(boolean enabled) {
+        this.preprocessEnabled = enabled;
+    }
+
+    public boolean containsBase(String base) {
+        return indexMap.containsKey(base);
+    }
+
+    public Integer addBase(String base) {
+        if (indexMap.containsKey(base)) {
+            throw new IllegalStateException("Already contains base " + base);
+        }
+
+        Integer newIndex = indexMap.size(); //always bigger than anyone
+        indexMap.put(base, newIndex);
+
+        return newIndex;
+    }
+
+    public Integer getIndex(String base) {
+        if (indexMap.containsKey(base)) {
+            return indexMap.get(base);
+        }
+
+        throw new IllegalArgumentException("No such nGram in dictionary");
+    }
+
+    public TreeMap<Integer, Integer> parseString(String text, boolean modificationEnabled) {
+        //TODO: Check for null string and string with length less than nGramLength
+        TreeMap<Integer, Integer> parsedString = new TreeMap<Integer, Integer>();
+        String preprocessedText = preprocessEnabled ? preprocessString(text) : text;
+
+        ArrayList<String> bases = getBases(preprocessedText);
+
+        for (String base : bases) {
+            Integer index;
+            if (containsBase(base)) {
+                index = getIndex(base);
+            } else if (modificationEnabled) {
+                index = addBase(base);
+            } else {
+                continue;
+            }
+
+            if (parsedString.containsKey(index)) {
+                Integer count = parsedString.get(index);
+                count++;
+                parsedString.put(index, count);
+            } else {
+                parsedString.put(index, 1);
+            }
+        }
+
+        return parsedString;
+    }
+
+    private ArrayList<String> getBases(String string) {
+        ArrayList<String> bases = new ArrayList<String>();
+
+        if (string.length() > nGramLength) {
+            for (int i = 0; i < string.length() - (nGramLength - 1); i++) {
+                bases.add(string.substring(i, i + nGramLength));
+            }
+        }
+
+        return bases;
+    }
+
+    public String preprocessString(String text) {
+        //TODO: implement
+        return text;
+    }
+
+    public Set<String> getBaseSet() {
+        return indexMap.keySet();
+    }
+
     public void serializeDictionary() throws IOException {
         ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(DICTIONARY_SERIALIZED_FILENAME));
         outputStream.writeObject(indexMap);
@@ -43,62 +128,11 @@ public class Dictionary {
         }
     }
 
-    public int getDictionarySize() {
-        return indexMap.size();
-    }
 
-    public void setNGramLength(int nGramLength) {
-        this.nGramLength = nGramLength;
-    }
 
-    public void setPreprocessEnabled(boolean enabled) {
-        this.preprocessEnabled = enabled;
-    }
 
-    public Integer getIndex(String base) {
-        if (indexMap.containsKey(base)) {
-            return indexMap.get(base);
-        }
 
-        throw new IllegalArgumentException("No such nGram in dictionary");
-    }
-
-    public Set<String> getBaseSet() {
-        return indexMap.keySet();
-    }
-
-    public Integer addBase(String base) {
-        /*
-        if (indexMap.containsKey(base)) {
-            throw something
-        }
-        */
-
-        Integer newIndex = indexMap.size(); //always bigger than anyone
-        indexMap.put(base, newIndex);
-
-        return newIndex;
-    }
-
-    public ArrayList<String> parseStringOld(String string) {
-        return parseString(string, preprocessEnabled);
-    }
-
-    public ArrayList<String> parseString(String string, boolean preprocess) {
-        return preprocess ? getPreprocessedBases(string) : getBases(string);
-    }
-
-    private ArrayList<String> getBases(String string) {
-        ArrayList<String> bases = new ArrayList<String>();
-
-        if (string.length() > nGramLength) {
-            for (int i = 0; i < string.length() - (nGramLength - 1); i++) {
-                bases.add(string.substring(i, i + nGramLength));
-            }
-        }
-
-        return bases;
-    }
+    /*
 
     private ArrayList<String> getPreprocessedBases(String string) {
         StringBuffer buffer = new StringBuffer();
@@ -120,8 +154,17 @@ public class Dictionary {
         return bases;
     }
 
-    public boolean containsBase(String base) {
-        return indexMap.containsKey(base);
+
+
+
+
+
+    public ArrayList<String> parseStringOld(String string) {
+        return parseString(string, preprocessEnabled);
+    }
+
+    public ArrayList<String> parseString(String string, boolean preprocess) {
+        return preprocess ? getPreprocessedBases(string) : getBases(string);
     }
 
     //Maybe there should be many content sets with no names in the future
@@ -234,4 +277,6 @@ public class Dictionary {
         //TODO: implement
         return null;
     }
+
+    */
 }

@@ -11,7 +11,7 @@ import java.util.Iterator;
 
 public class SpamBayes {
     private static final String CLASSIFIER_SERIALIZED_FILENAME = "classifier.cls";
-
+/*
     public static void main(String args[]) {
         String hamFilename = args[0];
         String spamFilename = args[1];
@@ -37,7 +37,7 @@ public class SpamBayes {
 
             for (double level : levels) {
                 classifyTestContent(testFilename, classifier, 100000, 200000, level);
-            }*/
+            }
 
             //classifyTestContent("ham.xml", classifier, 0, 100000, 0.5);
             classifyTestContent("spam.json", classifier, 100000, 200000, 0.5);
@@ -169,7 +169,7 @@ public class SpamBayes {
 
                 /*if (timeSpent >= 1000L) {
                     break;
-                }*/
+                }
                 text = reader.next();
             }
 
@@ -219,5 +219,5 @@ public class SpamBayes {
             }
         }
     }
-
+*/
 }

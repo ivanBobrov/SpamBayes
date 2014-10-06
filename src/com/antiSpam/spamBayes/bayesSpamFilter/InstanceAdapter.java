@@ -1,39 +1,39 @@
 package com.antiSpam.spamBayes.bayesSpamFilter;
 
 import com.antiSpam.spamBayes.utils.Dictionary;
-
 import weka.core.Instance;
 import weka.core.SparseInstance;
-
 import java.util.Map;
 import java.util.SortedMap;
 
 
 public class InstanceAdapter {
-    private Instance instance;
+    private SparseInstance instance;
 
     public InstanceAdapter(String text, double classValue) {
+        Dictionary dictionary = Dictionary.getInstance();
+        SortedMap<Integer, Integer> parsedString = dictionary.parseString(text, true);
+
         /*
-        SortedMap<Integer, Integer> string = Dictionary.getInstance().parseString(text);
+        As mentioned at stackOverflow.com, there is no better way to convert Integer[] to int[]
+         */
+        int[] indices = new int[parsedString.size() + 1];
+        double[] attValues = new double[parsedString.size() + 1];
 
-        //TODO: find best way to convert sorted map to array
-        int[] indices = new int[string.size() + 1];
-        double[] attValues = new double[string.size() + 1];
+        int numAttributes = dictionary.getDictionarySize() + 1;
+        indices[0] = 0;
+        attValues[0] = classValue;
 
-        int i = 0;
-        for (Map.Entry<Integer, Integer> entry : string.entrySet()) {
+        int i = 1;
+        for (Map.Entry<Integer, Integer> entry : parsedString.entrySet()) {
             indices[i] = entry.getKey();
             attValues[i] = entry.getValue();
             i++;
         }
 
-        int numAttributes = Dictionary.getInstance().getDictionarySize() + 1;
-        indices[indices.length - 1] = numAttributes - 1;
-        attValues[attValues.length - 1] = classValue;
+
 
         instance = new SparseInstance(1.0, attValues, indices, numAttributes);
-        */
-        instance = Dictionary.generateInstance(text);
     }
 
     public Instance getRawInstance() {

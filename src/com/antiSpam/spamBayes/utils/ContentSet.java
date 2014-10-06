@@ -14,30 +14,8 @@ public class ContentSet {
     }
 
     public void addString(String string) {
-        //TODO: Check for null string and string with length less than N_GRAM_LENGTH
-        ArrayList<String> bases = dictionary.parseStringOld(string);
-        SortedMap<Integer, Integer> stringMap = new TreeMap<Integer, Integer>();
 
-        for (String base : bases) {
-            Integer index;
-            if (dictionary.containsBase(base)) {
-                 index = dictionary.getIndex(base);
-            } else {
-                index = dictionary.addBase(base);
-            }
-
-            if (stringMap.containsKey(index)) {
-                Integer count = stringMap.get(index);
-                count++;
-                stringMap.put(index, count);
-            } else {
-                stringMap.put(index, 1);
-            }
-        }
-
-        if (!stringMap.isEmpty()) {
-            stringList.add(stringMap);
-        }
+        stringList.add(dictionary.parseString(string, true));
     }
 
     public int getStringCount() {
