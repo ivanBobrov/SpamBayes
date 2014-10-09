@@ -1,6 +1,6 @@
 package com.antiSpam.spamBayes;
 
-import com.antiSpam.spamBayes.utils.BayesSpamFilterException;
+import com.antiSpam.spamBayes.bayesSpamFilter.BayesSpamFilterException;
 
 import java.io.IOException;
 import java.io.Serializable;

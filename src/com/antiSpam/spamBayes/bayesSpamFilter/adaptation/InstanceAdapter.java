@@ -1,4 +1,4 @@
-package com.antiSpam.spamBayes.bayesSpamFilter;
+package com.antiSpam.spamBayes.bayesSpamFilter.adaptation;
 
 import com.antiSpam.spamBayes.utils.Dictionary;
 import weka.core.Instance;

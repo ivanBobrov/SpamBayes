@@ -1,7 +1,10 @@
 package com.antiSpam.spamBayes.utils;
 
 
-import weka.core.*;
+import com.antiSpam.spamBayes.utils.preprocessor.ForticomStrictMetaphone;
+import com.antiSpam.spamBayes.utils.preprocessor.MetaphonePreprocessor;
+import com.antiSpam.spamBayes.utils.preprocessor.NewTranslitMetaphone2;
+import com.antiSpam.spamBayes.utils.preprocessor.SpamTextPreprocessor;
 
 import java.io.*;
 import java.util.*;
@@ -13,7 +16,7 @@ public class Dictionary {
 
     private int nGramLength = 3;
     private boolean preprocessEnabled = false;
-    private ASCIIPreprocessor textPreprocessor;
+    private SpamTextPreprocessor textPreprocessor;
 
     private HashMap<String, Integer> indexMap = new HashMap<String, Integer>();
 
@@ -26,7 +29,7 @@ public class Dictionary {
     }
 
     private Dictionary() {
-        this.textPreprocessor = new ASCIIPreprocessor();
+        this.textPreprocessor = new ForticomStrictMetaphone();
     }
 
     public int getDictionarySize() {

@@ -1,4 +1,4 @@
-package com.antiSpam.spamBayes.utils;
+package com.antiSpam.spamBayes.bayesSpamFilter;
 
 import java.io.IOException;
 

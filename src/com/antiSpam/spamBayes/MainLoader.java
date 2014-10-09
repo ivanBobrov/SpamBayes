@@ -1,8 +1,9 @@
 package com.antiSpam.spamBayes;
 
 import com.antiSpam.spamBayes.bayesSpamFilter.BayesSpamFilter;
-import com.antiSpam.spamBayes.utils.BayesSpamFilterException;
-import com.antiSpam.spamBayes.utils.JSONFileReader;
+import com.antiSpam.spamBayes.bayesSpamFilter.BayesSpamFilterException;
+import com.antiSpam.spamBayes.utils.Dictionary;
+import com.antiSpam.spamBayes.utils.io.JSONFileReader;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -18,20 +19,22 @@ public class MainLoader {
                 spamFilter.loadSpamFilter();
             } catch (IOException loadingException) {
                 System.out.print("\rCan't load filter. Building...");
+
+                Dictionary.getInstance().setPreprocessEnabled(true);
                 spamFilter.build();
-                try {
+                /*try {
                     System.out.print("\rSaving filter...");
                     spamFilter.storeSpamFilter();
                 } catch (IOException storeException) {
                     storeException.printStackTrace();
                     System.exit(1);
-                }
+                }*/
             }
 
             System.out.println("\rClassifying");
 
             try {
-                performTest(spamFilter, 0, 84261);
+                performTest(spamFilter, 100000, 200000);
             } catch (IOException exception) {
                 exception.printStackTrace();
                 System.exit(1);
@@ -44,7 +47,7 @@ public class MainLoader {
 
     private static void performTest(SpamFilter spamFilter, int fromMessage, int toMessage)
             throws IOException, BayesSpamFilterException {
-        Iterator<String> fileReader = new JSONFileReader("ham_new.json", fromMessage, toMessage);
+        Iterator<String> fileReader = new JSONFileReader("spam.json", fromMessage, toMessage);
 
         double spam = 0, ham = 0;
         int postCount = 0;
@@ -69,7 +72,7 @@ public class MainLoader {
             double percentDone = (double)postCount*100 / (double)(toMessage - fromMessage);
             spamPercent = spam * 100 / (double)postCount;
             hamPercent = ham * 100 / (double)postCount;
-            if (percentDone % 1 == 0) {
+            if (postCount % 1000 == 0) {
                 System.out.print("\rspam: " + spamPercent + "% | ham: " + hamPercent +
                         "% | done: " + percentDone + "%");
             }

@@ -1,4 +1,4 @@
-package com.antiSpam.spamBayes.utils;
+package com.antiSpam.spamBayes.utils.io;
 
 import com.sun.xml.internal.stream.events.CharacterEvent;
 import javax.xml.stream.XMLEventReader;

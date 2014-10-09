@@ -1,9 +1,10 @@
 package com.antiSpam.spamBayes.bayesSpamFilter;
 
 import com.antiSpam.spamBayes.SpamFilter;
-import com.antiSpam.spamBayes.utils.BayesSpamFilterException;
+import com.antiSpam.spamBayes.bayesSpamFilter.adaptation.InstanceAdapter;
+import com.antiSpam.spamBayes.bayesSpamFilter.adaptation.InstancesAdapter;
 import com.antiSpam.spamBayes.utils.Dictionary;
-import com.antiSpam.spamBayes.utils.JSONFileReader;
+import com.antiSpam.spamBayes.utils.io.JSONFileReader;
 import weka.classifiers.Classifier;
 import weka.classifiers.bayes.NaiveBayesMultinomial;
 
