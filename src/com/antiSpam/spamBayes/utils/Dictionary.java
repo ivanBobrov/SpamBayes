@@ -48,7 +48,14 @@ public class Dictionary {
             throw new IllegalStateException("Already contains base " + base);
         }
 
-        Integer newIndex = indexMap.size(); //always bigger than anyone
+        /*
+        Always bigger than anyone.
+
+        One added, because zero is classIndex for classifier and
+        index of nGram corresponds to its ordinal value in Instance.
+        So, in other words, value for zero index already exists and it is classIndex.
+         */
+        Integer newIndex = indexMap.size() + 1;
         indexMap.put(base, newIndex);
 
         return newIndex;

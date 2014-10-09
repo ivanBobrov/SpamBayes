@@ -10,9 +10,9 @@ import java.util.SortedMap;
 public class InstanceAdapter {
     private SparseInstance instance;
 
-    public InstanceAdapter(String text, double classValue) {
+    public InstanceAdapter(String text, double classValue, boolean dictionaryModificationEnabled) {
         Dictionary dictionary = Dictionary.getInstance();
-        SortedMap<Integer, Integer> parsedString = dictionary.parseString(text, true);
+        SortedMap<Integer, Integer> parsedString = dictionary.parseString(text, dictionaryModificationEnabled);
 
         /*
         As mentioned at stackOverflow.com, there is no better way to convert Integer[] to int[]
@@ -30,8 +30,6 @@ public class InstanceAdapter {
             attValues[i] = entry.getValue();
             i++;
         }
-
-
 
         instance = new SparseInstance(1.0, attValues, indices, numAttributes);
     }

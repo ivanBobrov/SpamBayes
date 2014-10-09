@@ -6,8 +6,10 @@ import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
 
+import java.io.Serializable;
 
-public class InstancesAdapter {
+
+public class InstancesAdapter implements Serializable {
     private FastInstances instances = null;
 
     public InstancesAdapter() {
@@ -25,6 +27,10 @@ public class InstancesAdapter {
 
     public void add(Instance instance) {
         instances.add(instance);
+    }
+
+    public void removeLastInstance() {
+        instances.delete(instances.numInstances() - 1);
     }
 
     public Instances getRawInstances() {

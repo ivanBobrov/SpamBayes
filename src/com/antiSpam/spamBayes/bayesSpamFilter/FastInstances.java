@@ -1,7 +1,5 @@
 package com.antiSpam.spamBayes.bayesSpamFilter;
 
-
-import weka.core.Attribute;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -39,9 +37,5 @@ public class FastInstances extends Instances implements Serializable {
 
     public void replaceAttributes(FastVector attributes) {
         m_Attributes = attributes;
-        /*for (int i = 0; i < numAttributes(); i++) {
-            attribute(i).setIndex(i);
-        }*/
-
     }
 }
