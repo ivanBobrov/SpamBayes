@@ -94,6 +94,13 @@ public class BayesSpamFilter implements SpamFilter {
     @Override
     public boolean check(String text) throws BayesSpamFilterException {
         //TODO: check for not built classifier (?)
+
+        //Temporary
+        if (headerInstances == null) {
+            headerInstances = new InstancesAdapter();
+            headerInstances.addAllAttributes();
+        }
+
         try {
             InstanceAdapter newInstance = new InstanceAdapter(text, UNDEFINED_CLASS_INDEX, false);
             headerInstances.add(newInstance.getRawInstance());
@@ -114,8 +121,8 @@ public class BayesSpamFilter implements SpamFilter {
             ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream("spamFilter.filter"));
             outputStream.writeObject(hamFilename);
             outputStream.writeObject(spamFilename);
-            outputStream.writeObject(trainingInstances);
-            outputStream.writeObject(headerInstances);
+            //outputStream.writeObject(trainingInstances);
+            //outputStream.writeObject(headerInstances);
             outputStream.writeObject(classifier);
             outputStream.flush();
             outputStream.close();
@@ -133,8 +140,8 @@ public class BayesSpamFilter implements SpamFilter {
 
             hamFilename         = (String)              inputStream.readObject();
             spamFilename        = (String)              inputStream.readObject();
-            trainingInstances   = (InstancesAdapter)    inputStream.readObject();
-            headerInstances     = (InstancesAdapter)    inputStream.readObject();
+            //trainingInstances   = (InstancesAdapter)    inputStream.readObject();
+            //headerInstances     = (InstancesAdapter)    inputStream.readObject();
             classifier          = (Classifier)          inputStream.readObject();
             inputStream.close();
 
