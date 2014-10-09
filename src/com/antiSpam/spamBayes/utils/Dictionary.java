@@ -10,8 +10,10 @@ public class Dictionary {
     private static final String REGEX = "\\s|\\.|,|\"|-|\\s+|\\?|!|:|–|\\)|\\(|\\*|\\[|\\]|\\|/|;|»|«|#";
     private static final String DICTIONARY_SERIALIZED_FILENAME = "dictionary.serial";
     private static Dictionary instance = null;
+
     private int nGramLength = 3;
     private boolean preprocessEnabled = false;
+    private ASCIIPreprocessor textPreprocessor;
 
     private HashMap<String, Integer> indexMap = new HashMap<String, Integer>();
 
@@ -24,7 +26,7 @@ public class Dictionary {
     }
 
     private Dictionary() {
-
+        this.textPreprocessor = new ASCIIPreprocessor();
     }
 
     public int getDictionarySize() {
@@ -111,8 +113,7 @@ public class Dictionary {
     }
 
     public String preprocessString(String text) {
-        //TODO: implement
-        return text;
+        return textPreprocessor.convert(text);
     }
 
     public Set<String> getBaseSet() {
