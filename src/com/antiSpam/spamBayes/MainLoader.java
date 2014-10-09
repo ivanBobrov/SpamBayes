@@ -5,6 +5,7 @@ import com.antiSpam.spamBayes.utils.BayesSpamFilterException;
 import com.antiSpam.spamBayes.utils.JSONFileReader;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 
 public class MainLoader {
@@ -30,7 +31,7 @@ public class MainLoader {
             System.out.println("\rClassifying");
 
             try {
-                performTest(spamFilter, 100000, 200000);
+                performTest(spamFilter, 0, 84261);
             } catch (IOException exception) {
                 exception.printStackTrace();
                 System.exit(1);
@@ -43,7 +44,7 @@ public class MainLoader {
 
     private static void performTest(SpamFilter spamFilter, int fromMessage, int toMessage)
             throws IOException, BayesSpamFilterException {
-        JSONFileReader fileReader = new JSONFileReader("ham.json", fromMessage, toMessage);
+        Iterator<String> fileReader = new JSONFileReader("ham_new.json", fromMessage, toMessage);
 
         double spam = 0, ham = 0;
         int postCount = 0;
