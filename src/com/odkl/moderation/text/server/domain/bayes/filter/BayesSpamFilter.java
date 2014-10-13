@@ -1,10 +1,10 @@
-package com.antiSpam.spamBayes.bayesSpamFilter;
+package com.odkl.moderation.text.server.domain.bayes.filter;
 
-import com.antiSpam.spamBayes.SpamFilter;
-import com.antiSpam.spamBayes.bayesSpamFilter.adaptation.InstanceAdapter;
-import com.antiSpam.spamBayes.bayesSpamFilter.adaptation.InstancesAdapter;
-import com.antiSpam.spamBayes.utils.ArrayIterator;
-import com.antiSpam.spamBayes.utils.Dictionary;
+import com.odkl.moderation.text.server.domain.bayes.SpamFilter;
+import com.odkl.moderation.text.server.domain.bayes.filter.adaptation.InstanceAdapter;
+import com.odkl.moderation.text.server.domain.bayes.filter.adaptation.InstancesAdapter;
+import com.odkl.moderation.text.server.domain.bayes.utils.ArrayIterator;
+import com.odkl.moderation.text.server.domain.bayes.utils.Dictionary;
 import weka.classifiers.bayes.NaiveBayesMultinomialUpdateable;
 
 import java.io.*;
@@ -133,7 +133,7 @@ public class BayesSpamFilter implements SpamFilter {
 
             Dictionary.getInstance().serializeDictionary();
         } catch (Exception exception) {
-            throw new IOException("Can't store bayesSpamFilter", exception);
+            throw new IOException("Can't store filter", exception);
         }
     }
 
@@ -148,7 +148,7 @@ public class BayesSpamFilter implements SpamFilter {
 
             Dictionary.getInstance().deserializeDictionary();
         } catch (Exception exception) {
-            throw new IOException("Can't restore bayesSpamFilter", exception);
+            throw new IOException("Can't restore filter", exception);
         }
     }
 }

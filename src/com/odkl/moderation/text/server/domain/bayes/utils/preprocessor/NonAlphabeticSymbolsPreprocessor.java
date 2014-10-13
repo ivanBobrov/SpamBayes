@@ -1,7 +1,4 @@
-package com.antiSpam.spamBayes.utils.preprocessor;
-
-
-import java.util.HashMap;
+package com.odkl.moderation.text.server.domain.bayes.utils.preprocessor;
 
 
 public class NonAlphabeticSymbolsPreprocessor implements SpamTextPreprocessor {

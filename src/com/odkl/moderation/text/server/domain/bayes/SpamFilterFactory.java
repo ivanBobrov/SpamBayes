@@ -1,7 +1,7 @@
-package com.antiSpam.spamBayes;
+package com.odkl.moderation.text.server.domain.bayes;
 
-import com.antiSpam.spamBayes.bayesSpamFilter.BayesSpamFilter;
-import com.antiSpam.spamBayes.bayesSpamFilter.BayesSpamFilterException;
+import com.odkl.moderation.text.server.domain.bayes.filter.BayesSpamFilter;
+import com.odkl.moderation.text.server.domain.bayes.filter.BayesSpamFilterException;
 
 import java.util.Iterator;
 

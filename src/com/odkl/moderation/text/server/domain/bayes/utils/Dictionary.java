@@ -1,9 +1,8 @@
-package com.antiSpam.spamBayes.utils;
+package com.odkl.moderation.text.server.domain.bayes.utils;
 
-import com.antiSpam.spamBayes.utils.preprocessor.ForticomStrictMetaphone;
-import com.antiSpam.spamBayes.utils.preprocessor.NewTranslitMetaphone2;
-import com.antiSpam.spamBayes.utils.preprocessor.NonAlphabeticSymbolsPreprocessor;
-import com.antiSpam.spamBayes.utils.preprocessor.SpamTextPreprocessor;
+import com.odkl.moderation.text.server.domain.bayes.utils.preprocessor.NewTranslitMetaphone2;
+import com.odkl.moderation.text.server.domain.bayes.utils.preprocessor.NonAlphabeticSymbolsPreprocessor;
+import com.odkl.moderation.text.server.domain.bayes.utils.preprocessor.SpamTextPreprocessor;
 import java.io.*;
 import java.util.*;
 

@@ -1,4 +1,4 @@
-package com.antiSpam.spamBayes.bayesSpamFilter.adaptation;
+package com.odkl.moderation.text.server.domain.bayes.filter.adaptation;
 
 import weka.core.FastVector;
 import weka.core.Instance;

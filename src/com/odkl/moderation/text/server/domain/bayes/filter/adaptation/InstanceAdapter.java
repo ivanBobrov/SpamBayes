@@ -1,6 +1,6 @@
-package com.antiSpam.spamBayes.bayesSpamFilter.adaptation;
+package com.odkl.moderation.text.server.domain.bayes.filter.adaptation;
 
-import com.antiSpam.spamBayes.utils.Dictionary;
+import com.odkl.moderation.text.server.domain.bayes.utils.Dictionary;
 import weka.core.Instance;
 import weka.core.SparseInstance;
 import java.util.Map;

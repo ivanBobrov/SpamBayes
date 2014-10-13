@@ -1,4 +1,4 @@
-package com.antiSpam.spamBayes.utils;
+package com.odkl.moderation.text.server.domain.bayes.utils;
 
 import java.util.Iterator;
 

@@ -1,6 +1,4 @@
-package com.antiSpam.spamBayes.bayesSpamFilter;
-
-import java.io.IOException;
+package com.odkl.moderation.text.server.domain.bayes.filter;
 
 
 public class BayesSpamFilterException extends Exception {

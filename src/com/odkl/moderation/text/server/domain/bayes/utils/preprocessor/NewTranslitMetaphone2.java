@@ -1,4 +1,4 @@
-package com.antiSpam.spamBayes.utils.preprocessor;
+package com.odkl.moderation.text.server.domain.bayes.utils.preprocessor;
 
 import java.util.Arrays;
 
