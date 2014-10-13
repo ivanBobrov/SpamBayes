@@ -3,10 +3,9 @@ package com.antiSpam.spamBayes.bayesSpamFilter;
 import com.antiSpam.spamBayes.SpamFilter;
 import com.antiSpam.spamBayes.bayesSpamFilter.adaptation.InstanceAdapter;
 import com.antiSpam.spamBayes.bayesSpamFilter.adaptation.InstancesAdapter;
+import com.antiSpam.spamBayes.utils.ArrayIterator;
 import com.antiSpam.spamBayes.utils.Dictionary;
-import com.antiSpam.spamBayes.utils.io.JSONFileReader;
-import weka.classifiers.Classifier;
-import weka.classifiers.bayes.NaiveBayesMultinomial;
+import weka.classifiers.bayes.NaiveBayesMultinomialUpdateable;
 
 import java.io.*;
 import java.util.Iterator;
@@ -14,10 +13,9 @@ import java.util.Iterator;
 /*
  TODO: check for null file names in constructor
  TODO: creating new filter without ham or spam (?)
- TODO: making headerInstances from trainingInstances
+ TODO: making headerInstances from trainingInstances and training instances from something packed
 */
 public class BayesSpamFilter implements SpamFilter {
-    public static final int LOADING_MESSAGES_COUNT = 51200;
 
     /*
     They are not enum only because of WEKA input parameters, which are ints.
@@ -26,26 +24,24 @@ public class BayesSpamFilter implements SpamFilter {
     public static final int HAM_CLASS_INDEX  = 0;
     public static final int UNDEFINED_CLASS_INDEX  = -1;
 
-    private String hamFilename;
-    private String spamFilename;
+    public static final double DEFAULT_THRESHOLD = 0.5;
+
     private InstancesAdapter trainingInstances = null;
     private InstancesAdapter headerInstances = null;
-    private Classifier classifier = null;
+    private NaiveBayesMultinomialUpdateable classifier = null;
 
-    public BayesSpamFilter(String hamFilename, String spamFilename) {
-        this.hamFilename = hamFilename;
-        this.spamFilename = spamFilename;
+    public BayesSpamFilter() {
+
     }
 
-    public BayesSpamFilter(String hamFilename) {
-        this(hamFilename, null);
+    public void build(String[] hamSet, String[] spamSet) throws BayesSpamFilterException {
+        Iterator<String> hamIterator  = new ArrayIterator<String>(hamSet);
+        Iterator<String> spamIterator = new ArrayIterator<String>(spamSet);
+        build(hamIterator, spamIterator);
     }
 
-    @Override
-    public void build() throws BayesSpamFilterException {
-        trainingInstances = new InstancesAdapter();
-        headerInstances = new InstancesAdapter();
-
+    public void build(Iterator<String> hamSetIterator, Iterator<String> spamSetIterator)
+            throws BayesSpamFilterException {
         /*
         It is so complicated, because WEKA always copy memory while adding new Instances and Instance's.
         I don't know why they did that, but it makes building very slow. So I added InstanceAdapter,
@@ -53,29 +49,30 @@ public class BayesSpamFilter implements SpamFilter {
         m_Instances and m_Attributes.
          */
 
-        try {
-            Iterator<String> hamFileIterator = new JSONFileReader(hamFilename, 0, LOADING_MESSAGES_COUNT);
-            while (hamFileIterator.hasNext()) {
-                InstanceAdapter newInstance = new InstanceAdapter(hamFileIterator.next(), HAM_CLASS_INDEX, true);
+        trainingInstances = new InstancesAdapter();
+        headerInstances = new InstancesAdapter();
+
+        while (hamSetIterator.hasNext()) {
+            String next = hamSetIterator.next();
+            if (next != null) {
+                InstanceAdapter newInstance = new InstanceAdapter(next, HAM_CLASS_INDEX, true);
                 trainingInstances.add(newInstance.getRawInstance());
             }
-
-            if (spamFilename != null) {
-                Iterator<String> spamFileIterator = new JSONFileReader(spamFilename, 0, LOADING_MESSAGES_COUNT);
-                while (spamFileIterator.hasNext()) {
-                    InstanceAdapter newInstance = new InstanceAdapter(spamFileIterator.next(), SPAM_CLASS_INDEX, true);
-                    trainingInstances.add(newInstance.getRawInstance());
-                }
-            }
-
-            trainingInstances.addAllAttributes();
-            headerInstances.addAllAttributes();
-        } catch (IOException exception) {
-            throw new BayesSpamFilterException("Can't read file", exception);
         }
 
+        while (spamSetIterator.hasNext()) {
+            String next = spamSetIterator.next();
+            if (next != null) {
+                InstanceAdapter newInstance = new InstanceAdapter(next, SPAM_CLASS_INDEX, true);
+                trainingInstances.add(newInstance.getRawInstance());
+            }
+        }
+
+        trainingInstances.addAllAttributes();
+        headerInstances.addAllAttributes();
+
         try {
-            classifier = new NaiveBayesMultinomial();
+            classifier = new NaiveBayesMultinomialUpdateable();
             classifier.buildClassifier(trainingInstances.getRawInstances());
         } catch (Exception exception) {
             throw new BayesSpamFilterException("Can't build classifier", exception);
@@ -83,17 +80,26 @@ public class BayesSpamFilter implements SpamFilter {
     }
 
     @Override
-    public void update() {
-        //TODO: implement
-    }
-
-    @Override
-    public void reportSpam(String spamText) {
-        //TODO: implement
+    public void reportSpam(String spamText) throws BayesSpamFilterException {
+        //TODO: remove old instances?
+        try {
+            InstanceAdapter newInstance = new InstanceAdapter(spamText, SPAM_CLASS_INDEX
+                    , false);
+            trainingInstances.add(newInstance.getRawInstance());
+            classifier.updateClassifier(newInstance.getRawInstance());
+        } catch (Exception exception) {
+            throw new BayesSpamFilterException("Can't upadte classifier with new spam instance", exception);
+        }
+        //TODO:implement
     }
 
     @Override
     public boolean check(String text) throws BayesSpamFilterException {
+        return check(text, DEFAULT_THRESHOLD);
+    }
+
+    @Override
+    public boolean check(String text, double level) throws BayesSpamFilterException {
         //TODO: check for not built classifier (?)
 
         //Temporary
@@ -110,18 +116,15 @@ public class BayesSpamFilter implements SpamFilter {
 
             headerInstances.removeLastInstance();
 
-            return classLabel > 0.5; //TODO: magic number
+            return classLabel > level;
         } catch (Exception exception) {
             throw new BayesSpamFilterException("Can't check new post message", exception);
         }
     }
 
-    @Override
     public void storeSpamFilter() throws IOException {
         try {
             ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream("spamFilter.filter"));
-            outputStream.writeObject(hamFilename);
-            outputStream.writeObject(spamFilename);
             //outputStream.writeObject(trainingInstances);
             //outputStream.writeObject(headerInstances);
             outputStream.writeObject(classifier);
@@ -134,16 +137,13 @@ public class BayesSpamFilter implements SpamFilter {
         }
     }
 
-    @Override
     public void loadSpamFilter() throws IOException {
         try {
             ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream("spamFilter.filter"));
 
-            hamFilename         = (String)              inputStream.readObject();
-            spamFilename        = (String)              inputStream.readObject();
             //trainingInstances   = (InstancesAdapter)    inputStream.readObject();
             //headerInstances     = (InstancesAdapter)    inputStream.readObject();
-            classifier          = (Classifier)          inputStream.readObject();
+            classifier          = (NaiveBayesMultinomialUpdateable)          inputStream.readObject();
             inputStream.close();
 
             Dictionary.getInstance().deserializeDictionary();

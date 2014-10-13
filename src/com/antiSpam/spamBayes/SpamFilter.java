@@ -2,39 +2,31 @@ package com.antiSpam.spamBayes;
 
 import com.antiSpam.spamBayes.bayesSpamFilter.BayesSpamFilterException;
 
-import java.io.IOException;
 import java.io.Serializable;
+import java.util.Iterator;
 
 
 public interface SpamFilter extends Serializable {
 
     /*
-    Adds to training set new spam message (but don't rebuilds classifier!).
+    Adds to training set new spam message
      */
-    void reportSpam(String spamText);
+    void reportSpam(String spamText) throws BayesSpamFilterException;
 
     /*
-    Classifies new text. Returns true, if incoming message is spam
+    Classifies new text. Returns true, if incoming message is spam.
+    Level [0...1]. Level means threshold of classification.
+        0 means all spam, 1 means all ham
      */
+    boolean check(String text, double level) throws BayesSpamFilterException;
+
     boolean check(String text) throws BayesSpamFilterException;
 
     /*
     Builds classifier for the first time
      */
-    void build() throws BayesSpamFilterException;
+    void build(String[] hamSet, String[] spamSet) throws BayesSpamFilterException;
 
-    /*
-    Rebuilds classifier with new data
-     */
-    void update();
-
-    /*
-    Stores spam filter to disk.
-     */
-    void storeSpamFilter() throws IOException;
-
-    /*
-    Restore spam filter
-     */
-    void loadSpamFilter() throws IOException;
+    void build(Iterator<String> hamSetIterator, Iterator<String> spamSetIterator)
+            throws BayesSpamFilterException;
 }

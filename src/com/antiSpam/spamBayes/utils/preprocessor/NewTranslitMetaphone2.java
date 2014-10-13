@@ -1,11 +1,10 @@
 package com.antiSpam.spamBayes.utils.preprocessor;
 
-
 import java.util.Arrays;
 
 
 public class NewTranslitMetaphone2 implements SpamTextPreprocessor {
-    private final boolean leaveDigits = false;
+    private final boolean leaveDigits = true;
 
     enum RawStringType {Numeric, Cyrilic, Latin}
 
@@ -44,7 +43,12 @@ public class NewTranslitMetaphone2 implements SpamTextPreprocessor {
             if ('0' <= curr && curr <= '9') {
                 string.append(curr);
                 prev = curr;
-
+            } else if (curr == ' ') { //Space
+                string.append(curr);
+                prev = curr;
+            } else if (curr == '~') { //All strange symbols
+                string.append(curr);
+                prev = curr;
             } else if (Character.isLetter(curr) && (curr != prev)) {
                 string.append(curr);
                 prev = curr;
@@ -168,7 +172,7 @@ public class NewTranslitMetaphone2 implements SpamTextPreprocessor {
                     result.append('Z'); break;
                 case 'X': result.append("KS"); break;
 
-                default: if (leaveDigits && isDigit(currentChar)) { result.append(currentChar); }
+                default: if ((leaveDigits && isDigit(currentChar)) || currentChar == ' ' || currentChar == '~') { result.append(currentChar); }
 
             }
         }
