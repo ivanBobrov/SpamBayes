@@ -1,4 +1,4 @@
-package com.odkl.moderation.text.server.domain.bayes.utils.io;
+package com.odkl.moderation.text.server.domain.bayes.io;
 
 import com.sun.xml.internal.stream.events.CharacterEvent;
 import javax.xml.stream.XMLEventReader;

@@ -83,8 +83,7 @@ public class BayesSpamFilter implements SpamFilter {
     public void reportSpam(String spamText) throws BayesSpamFilterException {
         //TODO: remove old instances?
         try {
-            InstanceAdapter newInstance = new InstanceAdapter(spamText, SPAM_CLASS_INDEX
-                    , false);
+            InstanceAdapter newInstance = new InstanceAdapter(spamText, SPAM_CLASS_INDEX, false);
             trainingInstances.add(newInstance.getRawInstance());
             classifier.updateClassifier(newInstance.getRawInstance());
         } catch (Exception exception) {
