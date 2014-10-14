@@ -5,19 +5,15 @@ import com.odkl.moderation.text.server.domain.bayes.filter.BayesSpamFilterExcept
 
 import java.util.Iterator;
 
-
 public class SpamFilterFactory {
 
-    public SpamFilter createSpamFilter(String[] hamSet, String[] spamSet) throws BayesSpamFilterException {
-        SpamFilter newSpamFilter = new BayesSpamFilter();
-        newSpamFilter.build(hamSet, spamSet);
-        return newSpamFilter;
-    }
+        public SpamFilter createSpamFilter(String[] hamSet, String[] spamSet) throws BayesSpamFilterException {
+                return new BayesSpamFilter(hamSet, spamSet);
+        }
 
-    public SpamFilter createSpamFilter(Iterator<String> hamSetIterator, Iterator<String> spamSetIterator)
-            throws BayesSpamFilterException {
-        SpamFilter newSpamFilter = new BayesSpamFilter();
-        newSpamFilter.build(hamSetIterator, spamSetIterator);
-        return newSpamFilter;
-    }
+        public SpamFilter createSpamFilter(Iterator<String> hamSetIterator, Iterator<String> spamSetIterator)
+                throws BayesSpamFilterException {
+
+                return new BayesSpamFilter(hamSetIterator, spamSetIterator);
+        }
 }
