@@ -7,13 +7,13 @@ import java.util.Iterator;
 
 public class SpamFilterFactory {
 
-        public SpamFilter createSpamFilter(String[] hamSet, String[] spamSet) throws BayesSpamFilterException {
-                return new BayesSpamFilter(hamSet, spamSet);
-        }
+    public static SpamFilter createSpamFilter(String[] hamSet, String[] spamSet) throws BayesSpamFilterException {
+        return new BayesSpamFilter(hamSet, spamSet);
+    }
 
-        public SpamFilter createSpamFilter(Iterator<String> hamSetIterator, Iterator<String> spamSetIterator)
-                throws BayesSpamFilterException {
+    public static SpamFilter createSpamFilter(Iterator<String> hamSetIterator, Iterator<String> spamSetIterator)
+            throws BayesSpamFilterException {
+        return new BayesSpamFilter(hamSetIterator, spamSetIterator);
+    }
 
-                return new BayesSpamFilter(hamSetIterator, spamSetIterator);
-        }
 }

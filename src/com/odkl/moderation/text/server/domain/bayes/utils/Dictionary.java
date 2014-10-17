@@ -1,156 +1,131 @@
 package com.odkl.moderation.text.server.domain.bayes.utils;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
 import com.odkl.moderation.text.server.domain.bayes.utils.preprocessor.NewTranslitMetaphone2;
 import com.odkl.moderation.text.server.domain.bayes.utils.preprocessor.NonAlphabeticSymbolsPreprocessor;
 import com.odkl.moderation.text.server.domain.bayes.utils.preprocessor.SpamTextPreprocessor;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.TreeMap;
+import gnu.trove.impl.Constants;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TIntShortMap;
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntShortHashMap;
+import gnu.trove.set.TIntSet;
 
 public class Dictionary {
-        private static final String REGEX = "\\s|\\.|,|\"|-|\\s+|\\?|!|:|–|\\)|\\(|\\*|\\[|\\]|\\|/|;|»|«|#";
-        private static final String DICTIONARY_SERIALIZED_FILENAME = "dictionary.serial";
-        private static Dictionary instance = null;
 
-        private int nGramLength = 3;
-        private boolean preprocessEnabled = false;
-        private SpamTextPreprocessor[] textPreprocessor;
+    private static final int N_GRAM_LENGTH = 3;
 
-        private HashMap<String, Integer> indexMap = new HashMap<String, Integer>();
+    private static final TIntShortMap EMPTY_MAP = new TIntShortHashMap(0);
 
-        public static Dictionary getInstance() {
-                if (instance == null) {
-                        instance = new Dictionary();
+    private boolean preprocessEnabled = false;
+
+    private SpamTextPreprocessor[] textPreprocessor;
+
+    private TIntIntMap indexMap = new TIntIntHashMap(1000000, Constants.DEFAULT_LOAD_FACTOR, 0, 0);
+
+    public Dictionary() {
+        this.textPreprocessor = new SpamTextPreprocessor[2];
+
+        this.textPreprocessor[0] = new NonAlphabeticSymbolsPreprocessor();
+        this.textPreprocessor[1] = new NewTranslitMetaphone2();
+    }
+
+    public int getDictionarySize() {
+        return indexMap.size();
+    }
+
+    public void setPreprocessEnabled(boolean enabled) {
+        this.preprocessEnabled = enabled;
+    }
+
+    public TIntShortMap parseString(String text, boolean modificationEnabled) {
+        //TODO: Check for null string and string with length less than nGramLength
+        String preprocessedText = preprocessEnabled ? preprocessString(text) : text;
+
+        if (text.length() < N_GRAM_LENGTH) {
+            return EMPTY_MAP;
+        }
+
+        int size = text.length() - N_GRAM_LENGTH + 1;
+
+        int[] bases = new int[size];
+        getBases(preprocessedText, bases, size);
+
+        TIntShortMap parsedString = new TIntShortHashMap(size, Constants.DEFAULT_LOAD_FACTOR, (short) 0, (short) 0);
+
+        for (int i = 0; i < size; i++) {
+            int base = bases[i];
+            if (base == 0) {
+                continue;
+            }
+
+            int index = indexMap.get(base);
+            if (index == 0) {
+                if (modificationEnabled) {
+                    index = indexMap.size() + 1;
+                    indexMap.put(base, index);
+                } else {
+                    continue;
                 }
+            }
 
-                return instance;
+            parsedString.adjustOrPutValue(index, (short) 1, (short) 1);
         }
 
-        private Dictionary() {
-                this.textPreprocessor = new SpamTextPreprocessor[2];
+        return parsedString;
+    }
 
-                this.textPreprocessor[0] = new NonAlphabeticSymbolsPreprocessor();
-                this.textPreprocessor[1] = new NewTranslitMetaphone2();
+    private void getBases(String text, int[] bases, int size) {
+        if (text.length() < N_GRAM_LENGTH) {
+            throw new IllegalArgumentException("Text is too small");
         }
 
-        public int getDictionarySize() {
-                return indexMap.size();
+        int base = 0;
+
+        for (int i = 0, j = 1 - N_GRAM_LENGTH; j < size; i++, j++) {
+            base <<= 12;
+            base |= text.charAt(i) & 0x00000FFF;
+
+            if (j >= 0) {
+                bases[j] = base;
+            }
+        }
+    }
+
+    public String preprocessString(String text) {
+        String res = text;
+        for (SpamTextPreprocessor preprocessor : textPreprocessor) {
+            res = preprocessor.convert(res);
         }
 
-        public void setNGramLength(int nGramLength) {
-                this.nGramLength = nGramLength;
+        return res;
+    }
+
+    public TIntSet getBaseSet() {
+        return indexMap.keySet();
+    }
+
+    public void serializeDictionary(String filename) throws IOException {
+        ObjectOutputStream outputStream = new ObjectOutputStream(
+                new FileOutputStream(filename));
+        outputStream.writeObject(indexMap);
+        outputStream.flush();
+        outputStream.close();
+    }
+
+    public void deserializeDictionary(String filename) throws IOException {
+        try {
+            ObjectInputStream inputStream = new ObjectInputStream(
+                    new FileInputStream(filename));
+            indexMap = (TIntIntMap) inputStream.readObject();
+        } catch (ClassNotFoundException exception) {
+            throw new IOException("Deserialization error. Can't cast object");
         }
-
-        public void setPreprocessEnabled(boolean enabled) {
-                this.preprocessEnabled = enabled;
-        }
-
-        public boolean containsBase(String base) {
-                return indexMap.containsKey(base);
-        }
-
-        public Integer addBase(String base) {
-                if (indexMap.containsKey(base)) {
-                        throw new IllegalStateException("Already contains base " + base);
-                }
-
-        /*
-        Always bigger than anyone.
-
-        One added, because zero is classIndex for classifier and
-        index of nGram corresponds to its ordinal value in Instance.
-        So, in other words, value for zero index already exists and it is classIndex.
-         */
-                Integer newIndex = indexMap.size() + 1;
-                indexMap.put(base, newIndex);
-
-                return newIndex;
-        }
-
-        public Integer getIndex(String base) {
-                if (indexMap.containsKey(base)) {
-                        return indexMap.get(base);
-                }
-
-                throw new IllegalArgumentException("No such nGram in dictionary");
-        }
-
-        public TreeMap<Integer, Integer> parseString(String text, boolean modificationEnabled) {
-                //TODO: Check for null string and string with length less than nGramLength
-                TreeMap<Integer, Integer> parsedString = new TreeMap<Integer, Integer>();
-                String preprocessedText = preprocessEnabled ? preprocessString(text) : text;
-
-                //String[] words = preprocessedText.split(REGEX);
-                //for (String word : words) {
-                ArrayList<String> bases = getBases(preprocessedText);
-
-                for (String base : bases) {
-                        Integer index;
-                        if (containsBase(base)) {
-                                index = getIndex(base);
-                        } else if (modificationEnabled) {
-                                index = addBase(base);
-                        } else {
-                                continue;
-                        }
-
-                        if (parsedString.containsKey(index)) {
-                                Integer count = parsedString.get(index);
-                                count++;
-                                parsedString.put(index, count);
-                        } else {
-                                parsedString.put(index, 1);
-                        }
-                }
-                //}
-
-                return parsedString;
-        }
-
-        private ArrayList<String> getBases(String string) {
-                ArrayList<String> bases = new ArrayList<String>();
-
-                //variant without spaces before and after
-                if (string.length() >= nGramLength) {
-                        for (int i = 0; i < string.length() - (nGramLength - 1); i++) {
-                                bases.add(string.substring(i, i + nGramLength));
-                        }
-                }
-
-                return bases;
-        }
-
-        public String preprocessString(String text) {
-                String res = text; //TODO: delete. It's for debug
-                for (SpamTextPreprocessor preprocessor : textPreprocessor) {
-                        res = preprocessor.convert(res);
-                }
-
-                return res;
-        }
-
-        public Set<String> getBaseSet() {
-                return indexMap.keySet();
-        }
-
-        public void serializeDictionary() throws IOException {
-                ObjectOutputStream outputStream = new ObjectOutputStream(
-                        new FileOutputStream(DICTIONARY_SERIALIZED_FILENAME));
-                outputStream.writeObject(indexMap);
-                outputStream.flush();
-                outputStream.close();
-        }
-
-        public void deserializeDictionary() throws IOException {
-                try {
-                        ObjectInputStream inputStream = new ObjectInputStream(
-                                new FileInputStream(DICTIONARY_SERIALIZED_FILENAME));
-                        indexMap = (HashMap<String, Integer>) inputStream.readObject();
-                } catch (ClassNotFoundException exception) {
-                        throw new IOException("Deserialization error. Can't cast object");
-                }
-        }
+    }
 }
